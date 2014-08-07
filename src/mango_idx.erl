@@ -8,6 +8,7 @@
 -export([
     list/1,
     recover/1,
+    filter_list/2,
 
     new/2,
     validate/1,
@@ -53,6 +54,16 @@ recover(Db) ->
     {ok, Special ++ lists:flatmap(fun(Doc) ->
         from_ddoc(Db, Doc)
     end, DDocs)}.
+
+%% Filter our index list based on the types provided
+filter_list(Indexes, Types) ->
+    Pred = fun (Index) ->
+        case lists:member(Index#idx.type, Types) of
+            true -> true;
+            _ -> false
+        end
+    end,
+    lists:filter(Pred, Indexes).
 
 
 new(Db, Opts) ->
@@ -101,7 +112,7 @@ from_ddoc(Db, {Props}) ->
             ?MANGO_ERROR(invalid_query_ddoc_language)
     end,
 
-    IdxMods = [mango_idx_view],
+    IdxMods = [mango_idx_view, mango_idx_text],
     Idxs = lists:flatmap(fun(Mod) -> Mod:from_ddoc({Props}) end, IdxMods),
     lists:map(fun(Idx) ->
         Idx#idx{
@@ -169,6 +180,8 @@ end_key(#idx{}=Idx, Ranges) ->
 
 cursor_mod(#idx{type = <<"json">>}) ->
     mango_cursor_view;
+cursor_mod(#idx{type = <<"text">>}) ->
+    mango_cursor_text;
 cursor_mod(#idx{def = all_docs, type= <<"special">>}) ->
     mango_cursor_view.
 
@@ -176,7 +189,9 @@ cursor_mod(#idx{def = all_docs, type= <<"special">>}) ->
 idx_mod(#idx{type = <<"json">>}) ->
     mango_idx_view;
 idx_mod(#idx{type = <<"special">>}) ->
-    mango_idx_special.
+    mango_idx_special;
+idx_mod(#idx{type = <<"text">>}) ->
+    mango_idx_text.
 
 
 db_to_name(#db{name=Name}) ->
@@ -199,7 +214,7 @@ get_idx_def(Opts) ->
 get_idx_type(Opts) ->
     case proplists:get_value(type, Opts) of
         <<"json">> -> <<"json">>;
-        %<<"text">> -> <<"text">>;
+        <<"text">> -> <<"text">>;
         %<<"geo">> -> <<"geo">>;
         undefined -> <<"json">>;
         BadType ->
