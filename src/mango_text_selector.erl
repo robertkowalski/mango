@@ -189,7 +189,7 @@ parse_selector({[{Field, Cond}]}) ->
 
 %% Only returns the value and not with the prepended \\:type
 get_value(Value) when is_binary(Value) ->
-    Value;
+    escape_lucene_chars(Value);
 get_value(Value) when is_integer(Value) ->
     list_to_binary(integer_to_list(Value));
 get_value(Value) when is_float(Value) ->
@@ -216,12 +216,15 @@ get_separator(Cond) ->
     end.
 
 
-%% + - && || ! ( ) { } [ ] ^ " ~ * ? : \
+%% + - && || ! ( ) { } [ ] ^ " ~ * ? : \ /
 escape_lucene_chars(Field) when is_binary(Field) ->
-    LuceneChars = [<<"+">>, <<"-">>, <<"&&">>, <<"||">>,
-    <<"!">>, <<"(">>, <<")">>, <<"{">>, <<"}">>, <<"\"">>,
-    <<"[">>, <<"]">>, <<"^">>, <<"\~">>, <<"*">>, <<"?">>,
+    LuceneChars = [<<"\\\\">>, <<"/">>, <<"\\+">>, <<"\\-">>, <<"\\&\\&">>,
+    <<"\\|\\|">>, <<"\\!">>, <<"\\(">>, <<"\\)">>, <<"\\{">>, <<"\\}">>,
+    <<"\"">>, <<"\\[">>, <<"\\]">>, <<"\\^">>, <<"\~">>, <<"\\*">>, <<"\\?">>,
     <<":">>],
-    lists:foldl(fun(Char, Acc) ->
-        binary:replace(Acc, Char, <<"\\", Char/binary>>)
-    end, Field, LuceneChars).
+    EscapedField = lists:foldl(fun(Char, Acc) ->
+        Old = binary_to_list(Char),
+        Replacement = binary_to_list(<<"\\\\", Char/binary>>),
+        re:replace(Acc, Old, Replacement, [global, {return, list}])
+    end, binary_to_list(Field), LuceneChars),
+    list_to_binary(EscapedField).
