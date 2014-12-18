@@ -170,6 +170,7 @@ get_textfield_values(Doc, {FieldName, FieldType}, Acc) ->
 
 get_textfield_values(Values, {FieldName, FieldType}, [SubName | Rest], Acc)
         when is_list(Values)->
+    Acc0 = [[<<FieldName/binary, ":length">>, length(Values), []] | Acc],
     case {SubName, Rest} of
         {<<"[]">>, []} ->
             lists:foldl(fun (Value, SubAcc) ->
@@ -180,14 +181,14 @@ get_textfield_values(Values, {FieldName, FieldType}, [SubName | Rest], Acc)
                     false ->
                         SubAcc
                  end
-            end, Acc, Values);
+            end, Acc0, Values);
         {<<"[]">>, _} ->
             lists:foldl(fun (Value, SubAcc) ->
                 get_textfield_values(Value, {FieldName, FieldType}, Rest,
                     SubAcc)
-            end, Acc, Values);
+            end, Acc0, Values);
         {_, _} ->
-            Acc
+            Acc0
     end;
 get_textfield_values({Values}, {FieldName, FieldType}, [SubName | Rest], Acc) ->
     Values0 = mango_doc:get_field({Values}, SubName),
