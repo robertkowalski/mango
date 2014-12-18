@@ -147,17 +147,16 @@ make_text(Idx) ->
     {Idx#idx.name, Text}.
 
 
+get_default_field_options(Props) ->
+    {default_field, {Default}} = lists:keyfind(default_field, 1, Props),
+    Enabled = couch_util:get_value(<<"enabled">>, Default, true),
+    Analyzer = couch_util:get_value(<<"analyzer">>, Default,"standard"),
+    {Enabled,Analyzer}.
+
+
 construct_analyzer({Props}) ->
     DefaultAnalyzer = couch_util:get_value(default_analyzer, Props, "keyword"),
-    {DefaultField, DefaultFieldAnalyzer} =
-        case lists:keyfind(default_field, 1, Props) of
-            {[{<<"enabled">>, true}, {<<"analyzer">>, Analyzer}]} ->
-                {true, Analyzer};
-            {[{<<"enabled">>, false}, _]} ->
-                {false, <<"standard">>};
-            _ ->
-                {true, <<"standard">>}
-        end,
+    {DefaultField, DefaultFieldAnalyzer} = get_default_field_options(Props),
     Fields = couch_util:get_value(fields, Props, all_fields),
     PerFieldAnalyzerList = case Fields of
         all_fields ->
