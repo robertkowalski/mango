@@ -153,13 +153,15 @@ parse_selector({[{Field, {[{<<"$exists">>, true}]}}]}) ->
 parse_selector({[{Field, {[{<<"$exists">>, false}]}}]}) ->
     parse_selector({[{Field, {[{<<"$exists">>, true}]}}]});
 parse_selector({[{<<"default">>, Cond}]}) ->
-    {[{<<"$text">>, Val}]} = Cond,
-    Val0 = get_value(Val),
     case parse_selector(Cond) of
         {negation, _} ->
+            {[{<<"$not">>, {[{<<"$text">>, SubVal0}]}}]} = Cond,
+            Val0 = get_value(SubVal0),
             <<"NOT default:", Val0/binary>>;
         _ ->
-            <<"default:", Val0/binary>>
+            {[{<<"$text">>, SubVal1}]} = Cond,
+            Val1 = get_value(SubVal1),
+            <<"default:", Val1/binary>>
     end;
 %% Object
 parse_selector({[{Field, Cond}]}) ->
