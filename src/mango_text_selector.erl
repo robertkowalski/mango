@@ -72,6 +72,28 @@ parse_selector({[{<<"$and">>, Args}]}) when is_list(Args) ->
         binary_to_list(parse_selector(Arg)) end, Args),
     Values0 = list_to_binary(string:join([E || E <- Values, E /= []], " AND ")),
     <<"(", Values0/binary, ")">>;
+%% This clause when we have to append a field name to the $and/$or values
+%% Occurs mainly during $elemMatch
+parse_selector({[{Field, {[{<<"$", Rest/binary>>, Args}]}}]})
+        when Rest =:= <<"or">>; Rest =:= <<"and">> ->
+    Values = lists:foldl(fun(Arg, Acc) ->
+        case Arg of
+            {[{<<"$and">>, _}]} ->
+                [binary_to_list(parse_selector({[{Field, Arg}]})) | Acc];
+            {[{<<"$or">>, _}]} ->
+                [binary_to_list(parse_selector({[{Field, Arg}]})) | Acc];
+            {[{SubField, Cond}]} ->
+                [binary_to_list(parse_selector({[{<<Field/binary, ".",
+                    SubField/binary>>, Cond}]})) | Acc]
+        end
+    end, [], Args),
+    Conjunction = case Rest of
+        <<"or">> -> " OR ";
+        <<"and">> -> " AND "
+    end,
+    Values0 = list_to_binary(string:join([E || E <- Values, E /= []],
+        Conjunction)),
+    <<"(", Values0/binary, ")">>;
 parse_selector({[{<<"$or">>, Args}]}) when is_list(Args) ->
     Values = lists:map(fun(Arg) ->
         binary_to_list(parse_selector(Arg)) end, Args),
@@ -104,11 +126,13 @@ parse_selector({[{Field, {[{<<"$in">>, Args}]}}]}) when is_list(Args) ->
     Values = lists:foldl(fun (Arg, Acc) ->
        case Arg of
            % array contains nested object
-           {[{Key, Val}]} ->
-                BinVal = parse_selector(Val),
-                Separator = get_separator(mango_json:type(Val)),
-                [binary_to_list(<<Field0/binary, ".", Key/binary,
-                    Separator/binary, BinVal/binary>>) | Acc];
+           {Object} ->
+                lists:foldl(fun({Key, Val}, SubAcc)->
+                    BinVal = parse_selector(Val),
+                    Separator = get_separator(mango_json:type(Val)),
+                    [binary_to_list(<<Field0/binary, ".", Key/binary,
+                    Separator/binary, BinVal/binary>>) | SubAcc]
+                end, Acc, Object);
             SingleVal ->
                 BinVal = parse_selector(SingleVal),
                 [binary_to_list(<<Field0/binary, BinVal/binary>>) | Acc]
@@ -119,15 +143,27 @@ parse_selector({[{Field, {[{<<"$in">>, Args}]}}]}) when is_list(Args) ->
 parse_selector({[{Field, {[{<<"$nin">>, Args}]}}]}) when is_list(Args) ->
     Results = parse_selector({[{Field, {[{<<"$in">>, Args}]}}]}),
     <<"(NOT ", Results/binary, ")">>;
-parse_selector({[{Field, {[{<<"$elemMatch">>, {[{<<"$and">>,
-        Queries}]}}]}}]}) ->
-    Values = lists:map(fun({[{SubField, Cond}]}) ->
-        SubField0 = case SubField of
-            <<>> -> Field;
-            Else -> <<Field/binary, ".", Else/binary>>
-        end,
-        binary_to_list(parse_selector({[{SubField0, Cond}]})) end, Queries),
-    Values0 = list_to_binary(string:join([E || E <- Values, E /= []], " AND ")),
+parse_selector({[{Field, {[{<<"$elemMatch">>, {[{<<"$", Rest/binary>>,
+        Queries}]}}]}}]}) when Rest =:= <<"or">>; Rest =:= <<"and">> ->
+    Values = lists:foldl(fun(Arg, Acc) ->
+        case Arg of
+            {[{<<>>, Cond}]} ->
+                [binary_to_list(parse_selector({[{Field, Cond}]})) | Acc];
+            {[{<<"$and">>, _}]} ->
+                [binary_to_list(parse_selector({[{Field, Arg}]})) | Acc];
+            {[{<<"$or">>, _}]} ->
+                [binary_to_list(parse_selector({[{Field, Arg}]})) | Acc];
+            {[{SubField, Cond}]} ->
+                [binary_to_list(parse_selector({[{<<Field/binary, ".",
+                    SubField/binary>>, Cond}]})) | Acc]
+        end
+    end, [], Queries),
+    Conjunction = case Rest of
+        <<"or">> -> " OR ";
+        <<"and">> -> " AND "
+    end,
+    Values0 = list_to_binary(string:join([E || E <- Values, E /= []],
+        Conjunction)),
     <<"(", Values0/binary, ")">>;
 parse_selector({[{Field, {[{<<"$elemMatch">>, Query}]}}]}) ->
     {[{SubField, Cond}]} = Query,
