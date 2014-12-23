@@ -188,16 +188,16 @@ parse_selector({[{Field, {[{<<"$exists">>, true}]}}]}) ->
 %% Placeholder, not sure if $exists:false can be translated to a lucene query
 parse_selector({[{Field, {[{<<"$exists">>, false}]}}]}) ->
     parse_selector({[{Field, {[{<<"$exists">>, true}]}}]});
-parse_selector({[{<<"default">>, Cond}]}) ->
+parse_selector({[{<<"$default">>, Cond}]}) ->
     case parse_selector(Cond) of
         {negation, _} ->
             {[{<<"$not">>, {[{<<"$text">>, SubVal0}]}}]} = Cond,
             Val0 = get_value(SubVal0),
-            <<"NOT default:", Val0/binary>>;
+            <<"NOT $default:", Val0/binary>>;
         _ ->
             {[{<<"$text">>, SubVal1}]} = Cond,
             Val1 = get_value(SubVal1),
-            <<"default:", Val1/binary>>
+            <<"$default:", Val1/binary>>
     end;
 %% Object
 parse_selector({[{Field, Cond}]}) ->

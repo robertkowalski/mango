@@ -19,7 +19,7 @@ create(Db, Selector0, Opts) ->
         <<"all_fields">> -> [];
         Else -> Else
     end,
-    IndexFields = [<<"default">> | Fields],
+    IndexFields = [<<"$default">> | Fields],
     ExistingIndexes = mango_idx:filter_list(mango_idx:list(Db), [<<"text">>]),
     UsableIndexes = find_usable_indexes(IndexFields, ExistingIndexes),
     if UsableIndexes /= [] -> ok; true ->
@@ -126,7 +126,7 @@ ddocid(Idx) ->
 find_usable_indexes(Possible, []) ->
     ?MANGO_ERROR({no_usable_index, {fields, Possible}});
 %% If the user did not specify any fields, then return all existing text indexes
-find_usable_indexes([<<"default">>], Existing) ->
+find_usable_indexes([<<"$default">>], Existing) ->
     Existing;
 find_usable_indexes(Possible, Existing) ->
     Usable = lists:foldl(fun(Idx, Acc) ->
@@ -149,7 +149,7 @@ find_usable_indexes(Possible, Existing) ->
 %% or any of the text indexes
 choose_best_index(Indexes, IndexFields) ->
     case IndexFields of
-        [<<"default">>] ->
+        [<<"$default">>] ->
             lists:foldl(fun(Idx, Acc) ->
                 case mango_idx:columns(Acc) of
                     all_fields -> Idx;
