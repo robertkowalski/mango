@@ -24,6 +24,12 @@
 }).
 
 
+-record(tacc, {
+    fields = all_fields,
+    path = []
+}).
+
+
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
@@ -115,185 +121,165 @@ get_index_entries({IdxProps}, Doc) ->
     end.
 
 
-%% Retrieves values for each field and returns it to dreyfus for indexing
-get_text_entries({IdxProps}, Doc0) ->
+get_text_entries({IdxProps}, Doc) ->
     Selector = case couch_util:get_value(<<"selector">>, IdxProps) of
         [] -> {[]};
         Else -> Else
     end,
-    Doc = filter_doc(Selector, Doc0),
-    Fields = couch_util:get_value(<<"fields">>, IdxProps),
-    DefaultField = couch_util:get_value(<<"default_field">>, IdxProps),
-    Results0 = case Fields of
-        <<"all_fields">> ->
-           get_all_textfield_values(Doc, []);
-        _ ->
-            lists:foldl(fun({Field}, Acc) ->
-                FieldName= couch_util:get_value(<<"field">>, Field),
-                FieldType= couch_util:get_value(<<"type">>, Field,
-                    <<"string">>),
-                get_textfield_values(Doc, {FieldName, FieldType}, Acc)
-            end, [], Fields)
-    end,
-    Results = case DefaultField of
-        {[{<<"enabled">>, false}, _]} ->
-            Results0;
-        {[{<<"enabled">>, false}]} ->
-            Results0;
-        _ ->
-            get_default_values(Doc, Results0)
-        end,
-    case lists:member(not_found, Results) of
+    case should_index(Selector, Doc) of
         true ->
-            [];
+            get_text_entries0(IdxProps, Doc);
         false ->
-            Results
+            []
     end.
 
-%% This is used by the selector for the lucene field name
-%% to filter out documents prior to the text search
-%% Also, do not index design documents
-filter_doc(Selector0, Doc) ->
-    Selector = mango_selector:normalize(Selector0),
-    Match = mango_selector:match(Selector, Doc),
-    DDocId = mango_doc:get_field(Doc, <<"_id">>),
-    case {Match, DDocId} of
-        {_, <<"_design/", _/binary>>} -> [];
-        {false, _} -> [];
-        {true, _} -> Doc
+
+get_text_entries0(IdxProps, Doc) ->
+    {DefaultEnabled, _} = get_default_text_field(IdxProps),
+    FieldsList = get_text_field_list(IdxProps),
+    TAcc = #tacc{fields = FieldsList},
+    Fields0 = get_text_field_values(Doc, TAcc),
+    Fields = if not DefaultEnabled -> Fields0; true ->
+        add_default_text_field(Fields0)
+    end,
+    FieldNames = get_field_names(Fields, []),
+    Converted = convert_text_fields(Fields),
+    FieldNames ++ Converted.
+
+
+get_text_field_values({Props}, TAcc) when is_list(Props) ->
+    get_text_field_values_obj(Props, TAcc, []);
+
+get_text_field_values(Values, TAcc) when is_list(Values) ->
+    NewPath = ["[]" | TAcc#tacc.path],
+    NewTAcc = TAcc#tacc{path = NewPath},
+    % We bypass make_text_field and directly call make_text_field_name
+    % because the length field name is not part of the path.
+    LengthFieldName = make_text_field_name(NewTAcc#tacc.path, <<"length">>),
+    LengthField = [{LengthFieldName, <<"length">>, length(Values)}],
+    get_text_field_values_arr(Values, NewTAcc, LengthField);
+
+get_text_field_values(Bin, TAcc) when is_binary(Bin) ->
+    make_text_field(TAcc, <<"string">>, Bin);
+
+get_text_field_values(Num, TAcc) when is_number(Num) ->
+    make_text_field(TAcc, <<"number">>, Num);
+
+get_text_field_values(Bool, TAcc) when is_boolean(Bool) ->
+    make_text_field(TAcc, <<"boolean">>, Bool);
+
+get_text_field_values(null, _) ->
+    % Should we and how would we index
+    % null fields?
+    [].
+
+
+get_text_field_values_obj([], _, FAcc) ->
+    FAcc;
+get_text_field_values_obj([{Key, Val} | Rest], TAcc, FAcc) ->
+    NewPath = [Key | TAcc#tacc.path],
+    NewTAcc = TAcc#tacc{path = NewPath},
+    Fields = get_text_field_values(Val, NewTAcc),
+    get_text_field_values_obj(Rest, TAcc, Fields ++ FAcc).
+
+
+get_text_field_values_arr([], _, FAcc) ->
+    FAcc;
+get_text_field_values_arr([Value | Rest], TAcc, FAcc) ->
+    Fields = get_text_field_values(Value, TAcc),
+    get_text_field_values_arr(Rest, TAcc, Fields ++ FAcc).
+
+
+add_default_text_field(Fields) ->
+    DefaultFields = add_default_text_field(Fields, []),
+    DefaultFields ++ Fields.
+
+
+add_default_text_field([], Acc) ->
+    Acc;
+add_default_text_field([{_Name, <<"string">>, Value} | Rest], Acc) ->
+    NewAcc = [{<<"$default">>, <<"string">>, Value} | Acc],
+    add_default_text_field(Rest, NewAcc);
+add_default_text_field([_ | Rest], Acc) ->
+    add_default_text_field(Rest, Acc).
+
+%% index of all field names
+get_field_names([], FAcc) ->
+    FAcc;
+get_field_names([{Name, _Type, _Value} | Rest], FAcc) ->
+    case lists:member([<<"$fieldnames">>, Name, []], FAcc) of
+        true ->
+            get_field_names(Rest, FAcc);
+        false ->
+            get_field_names(Rest, [[<<"$fieldnames">>, Name, []] | FAcc])
     end.
 
-%% Gets field/value pairs from user provided field
-get_textfield_values(Doc, {FieldName, FieldType}, Acc) ->
-    Path = re:split(FieldName, <<"\\.">>),
-    get_textfield_values(Doc, {FieldName, FieldType}, Path, Acc).
 
-get_textfield_values(Values, {FieldName, FieldType}, [SubName | Rest], Acc)
-        when is_list(Values)->
-    Acc0 = [[<<FieldName/binary, ":length">>, length(Values), []] | Acc],
-    case {SubName, Rest} of
-        {<<"[]">>, []} ->
-            lists:foldl(fun (Value, SubAcc) ->
-                case match_text_type(FieldType, Value) of
-                    true ->
-                        [[<<FieldName/binary, ":", FieldType/binary>>, Value,
-                            []] | SubAcc];
-                    false ->
-                        SubAcc
-                 end
-            end, Acc0, Values);
-        {<<"[]">>, _} ->
-            lists:foldl(fun (Value, SubAcc) ->
-                get_textfield_values(Value, {FieldName, FieldType}, Rest,
-                    SubAcc)
-            end, Acc0, Values);
-        {_, _} ->
-            Acc0
-    end;
-get_textfield_values({Values}, {FieldName, FieldType}, [SubName | Rest], Acc) ->
-    Values0 = mango_doc:get_field({Values}, SubName),
-    case {SubName, Rest, Values0} of
-        {<<"[]">>, _, _} ->
-            Acc;
-        {_, _, not_found} ->
-            Acc;
-        {_, _, bad_path} ->
-            Acc;
-        {_, [], Value} ->
-            case match_text_type(FieldType, Value) of
-                true ->
-                    [[<<FieldName/binary, ":", FieldType/binary>>,
-                        Value, []] | Acc];
-                false ->
-                    Acc
-             end;
-        {_, _, SubDoc} ->
-            get_textfield_values(SubDoc, {FieldName, FieldType}, Rest, Acc)
-    end;
-get_textfield_values(_, _ , _ , Acc) ->
-    Acc.
+convert_text_fields([]) ->
+    [];
+convert_text_fields([{Name, _Type, Value} | Rest]) ->
+    [[Name, Value, []] | convert_text_fields(Rest)].
 
 
-%% Gets all field/value pairs from document
-get_all_textfield_values([], Acc) ->
-    Acc;
-get_all_textfield_values({Doc}, Acc) when is_list(Doc) ->
-    lists:foldl(fun(SubDoc, SubAcc) ->
-        get_all_textfield_values(SubDoc, SubAcc)
-    end, Acc, Doc);
-get_all_textfield_values({<<Field/binary>>, <<Value/binary>>}, Acc) ->
-    [[<<Field/binary, ":string">>, Value, []] | Acc];
-get_all_textfield_values({<<Field/binary>>, Value}, Acc)
-        when is_number(Value) ->
-    [[<<Field/binary, ":number">>, Value, []] | Acc];
-get_all_textfield_values({<<Field/binary>>, Value}, Acc)
-        when is_boolean(Value) ->
-    [[<<Field/binary, ":boolean">>, Value, []] | Acc];
-%% field : array
-get_all_textfield_values({<<Field/binary>>, Values}, Acc)
-        when is_list(Values) ->
-    Acc0 = [[<<Field/binary,  ".[]:length">>, length(Values), []] | Acc],
-    lists:foldl(fun(ListVal, SubAcc) ->
-        get_all_textfield_values({<<Field/binary, ".[]">>, ListVal}, SubAcc)
-    end, Acc0, Values);
-%% field : object
-get_all_textfield_values({<<Field/binary>>, {Values}}, Acc)
-        when is_list(Values) ->
-    lists:foldl(fun(ListVal, SubAcc) ->
-        get_all_textfield_values({<<Field/binary>>, ListVal}, SubAcc)
-    end, Acc, Values);
-get_all_textfield_values({<<Field/binary>>, {<<SubField/binary>>,
-        <<Value/binary>>}}, Acc) ->
-    [[<<Field/binary, ".", SubField/binary, ":string">>, Value, []] | Acc];
-get_all_textfield_values({<<Field/binary>>, {<<SubField/binary>>, Value}}, Acc)
-        when is_number(Value) ->
-    [[<<Field/binary, ".", SubField/binary, ":number">>, Value, []] | Acc];
-get_all_textfield_values({<<Field/binary>>, {<<SubField/binary>>, Value}}, Acc)
-        when is_boolean(Value) ->
-    [[<<Field/binary, ".", SubField/binary, ":boolean">>, Value, []] | Acc];
-get_all_textfield_values({<<Field/binary>>, {<<SubField/binary>>, Values}}, Acc)
-        when is_list(Values) ->
-    Acc0 = [[<<Field/binary, ".[]:length">>, length(Values), []] | Acc],
-    lists:foldl(fun(ListVal, SubAcc) ->
-        get_all_textfield_values({<<Field/binary, ".[].", SubField/binary>>,
-            ListVal}, SubAcc)
-    end, Acc0, Values);
-get_all_textfield_values({<<Field/binary>>, {<<SubField/binary>>, {Values}}},
-        Acc) when is_list(Values) ->
-    lists:foldl(fun(ListVal, SubAcc) ->
-        get_all_textfield_values({<<Field/binary, ".", SubField/binary>>,
-            ListVal}, SubAcc)
-    end, Acc, Values).
+should_index(Selector, Doc) ->
+    % We should do this
+    NormSelector = mango_selector:normalize(Selector),
+    Matches = mango_selector:match(NormSelector, Doc),
+    IsDesign = case mango_doc:get_field(Doc, <<"_id">>) of
+        <<"_design/", _/binary>> -> true;
+        _ -> false
+    end,
+    Matches and not IsDesign.
 
 
-%% Gets all string values from the document and associates it with "default"
-get_default_values([], Acc) ->
-    Acc;
-get_default_values({Doc}, Acc) when is_list(Doc) ->
-    lists:foldl(fun(SubDoc, SubAcc) ->
-        get_default_values(SubDoc, SubAcc)
-    end, Acc, Doc);
-get_default_values({_, <<Value/binary>>}, Acc) ->
-    [[<<"default">>, Value, []] | Acc];
-%% field : array
-get_default_values({<<Field/binary>>, Values}, Acc) when is_list(Values) ->
-    lists:foldl(fun(ListVal, SubAcc) ->
-        get_default_values({<<Field/binary>>, ListVal}, SubAcc)
-    end, Acc, Values);
-%% field : object
-get_default_values({<<_/binary>>, {Values}}, Acc) when is_list(Values) ->
-    lists:foldl(fun(ListVal, SubAcc) ->
-        get_default_values(ListVal, SubAcc)
-    end, Acc, Values);
-get_default_values(_, Acc) ->
-    Acc.
+get_default_text_field(IdxProps) ->
+    {Props} = couch_util:get_value(<<"default_field">>, IdxProps, {[]}),
+    Enabled = couch_util:get_value(<<"enabled">>, Props, true),
+    Analyzer = couch_util:get_value(<<"analyzer">>, Props, <<"standard">>),
+    {Enabled, Analyzer}.
 
 
-match_text_type(<<"string">>, Value) when is_binary(Value) ->
-    true;
-match_text_type(<<"number">>, Value) when is_number(Value) ->
-    true;
-match_text_type(<<"boolean">>, Value) when is_boolean(Value) ->
-    true;
-match_text_type(_, _)  ->
-    false.
+get_text_field_list(IdxProps) ->
+    case couch_util:get_value(<<"fields">>, IdxProps) of
+        Fields when is_list(Fields) ->
+            lists:flatmap(fun get_text_field_info/1, Fields);
+        _ ->
+            all_fields
+    end.
+
+
+get_text_field_info({Props}) ->
+    Name = couch_util:get_value(<<"field">>, Props),
+    Type0 = couch_util:get_value(<<"type">>, Props),
+    if not is_binary(Name) -> []; true ->
+        Type = get_text_field_type(Type0),
+        [iolist_to_binary([Name, ":", Type])]
+    end.
+
+
+get_text_field_type(<<"number">>) ->
+    <<"number">>;
+get_text_field_type(<<"boolean">>) ->
+    <<"boolean">>;
+get_text_field_type(_) ->
+    <<"string">>.
+
+
+make_text_field(TAcc, Type, Value) ->
+    FieldName = make_text_field_name(TAcc#tacc.path, Type),
+    Fields = TAcc#tacc.fields,
+    case Fields == all_fields orelse lists:member(FieldName, Fields) of
+        true ->
+            [{FieldName, Type, Value}];
+        false ->
+            []
+    end.
+
+
+make_text_field_name([P | Rest], Type) ->
+    make_text_field_name0(Rest, [P, ":", Type]).
+
+make_text_field_name0([], Name) ->
+    iolist_to_binary(Name);
+make_text_field_name0([P | Rest], Name) ->
+    make_text_field_name0(Rest, [P, "." | Name]).

@@ -179,6 +179,13 @@ norm_ops({[{<<"$text">>, Arg}]}) when is_binary(Arg); is_number(Arg);
 norm_ops({[{<<"$text">>, Arg}]}) ->
     ?MANGO_ERROR({bad_arg, '$text', Arg});
 
+%% text seach operators
+norm_ops({[{<<"$default">>, {_}=Arg}]}) ->
+    {[{<<"$default">>, norm_ops(Arg)}]};
+norm_ops({[{<<"$default">>, Arg}]}) ->
+    ?MANGO_ERROR({bad_arg, '$default', Arg});
+
+
 % Terminals where we can't perform any validation
 % on the value because any value is acceptable.
 norm_ops({[{<<"$lt">>, _}]} = Cond) ->
@@ -272,7 +279,10 @@ norm_fields({[{<<"$elemMatch">>, Arg}]}, Path) ->
     {[{Path, Cond}]};
 
 norm_fields({[{<<"$text">>, _}]} = Cond, <<>>) ->
-    {[{<<"default">>, Cond}]};
+    {[{<<"$default">>, Cond}]};
+
+norm_fields({[{<<"$default">>, _}]} = Cond, <<>>) ->
+    Cond;
 
 % Any other operator is a terminal below which no
 % field names should exist. Set the path to this
