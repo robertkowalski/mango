@@ -69,7 +69,7 @@ execute(#cursor{db = Db, index = Idx, limit=Limit, opts=Opts} = Cursor0,
     },
     case dreyfus_fabric_search:go(DbName, DDoc, IndexName, QueryArgs) of
         {ok, Bookmark1, _, Hits0, _, _} ->
-            Hits = hits_to_json(DbName, true, Hits0),
+            Hits = hits_to_json(DbName, Hits0, Cursor0#cursor.selector),
             Bookmark = dreyfus_fabric_search:pack_bookmark(Bookmark1),
             UserAcc1 = try UserFun({row, {[{bookmark, Bookmark}]}}, UserAcc) of
                 {ok, NewAcc} -> NewAcc;
@@ -160,21 +160,31 @@ choose_best_index(Indexes, IndexFields) ->
             hd(Indexes)
     end.
 
-hits_to_json(DbName, IncludeDocs, Hits) ->
+hits_to_json(DbName, Hits, Selector) ->
     {Ids, HitData} = lists:unzip(lists:map(fun get_hit_data/1, Hits)),
-    if IncludeDocs ->
-        {ok, JsonDocs} = dreyfus_fabric:get_json_docs(DbName, Ids),
-        lists:zipwith(fun({Id, Order, Fields}, {Id, Doc}) ->
-            {[{id, Id}, {order, Order}, {fields, {Fields}}, Doc]}
-        end, HitData, JsonDocs);
-        % end;
-    true ->
-        lists:map(fun({Id, Order, Fields}) ->
-            {[{id, Id}, {order, Order}, {fields, {Fields}}]}
-        end, HitData)
-    end.
+    {ok, JsonDocs0} = dreyfus_fabric:get_json_docs(DbName, Ids),
+    JsonDocs = filter_text_results(JsonDocs0, Selector),
+    lists:zipwith(fun({Id, Order, Fields}, {Id, Doc}) ->
+        {[{id, Id}, {order, Order}, {fields, {Fields}}, Doc]}
+    end, HitData, JsonDocs).
 
 get_hit_data(Hit) ->
     Id = couch_util:get_value(<<"_id">>, Hit#hit.fields),
     Fields = lists:keydelete(<<"_id">>, 1, Hit#hit.fields),
     {Id, {Id, Hit#hit.order, Fields}}.
+
+
+%% List of operators that require post search filtering
+get_filter_ops() ->
+    [<<"$elemMatch">>, <<"$exists">>, <<"$mod">>, <<"$type">> , <<"$regex">>].
+
+
+filter_text_results(Docs, Selector) ->
+    case mango_selector:contains_op(Selector, get_filter_ops()) of
+        true ->
+            Pred = fun({_, {doc, Doc}}) -> mango_selector:match(Selector, Doc)
+            end,
+            lists:filter(Pred, Docs);
+        false ->
+            Docs
+    end.
