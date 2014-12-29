@@ -75,6 +75,106 @@ def create_db_and_indexes():
 
 DOCS = [
     {
+        "@graph": [
+            {
+            "http://ibm%2Ecom/ce/ns#system_deployment": {
+                "type": "uri",
+                "value": "urn:ce:/sy/mysys"
+            },
+            "http://ibm%2Ecom/ce/ns#edgeserver": True,
+            "http://ibm%2Ecom/ce/ac/ns#resource-group": {
+                "type": "uri",
+                "value": "urn:ce:/"
+            },
+            "http://ibm%2Ecom/ce/ns#owner": {
+                "type": "uri",
+                "value": "urn:ce:/account/fb#owner"
+            },
+            "http://ibm%2Ecom/ce/ns#emergency_contact": {
+                "type": "uri",
+                "value": "urn:ce:/sy/nally@us.ibm.com"
+            },
+            "http://www%2Ew3%2Eorg/2000/01/rdf-schema#label": "myapp",
+            "http://www%2Ew3%2Eorg/1999/02/22-rdf-syntax-ns#type": {
+                "type": "uri",
+                "value": "http://ibm.com/ce/ns#ApplicationDeployment"
+            },
+            "@id": "urn:ce:/sy/myapp"
+            }
+        ]
+    },
+    {
+        "@graph": [
+            {
+            "@id": "urn:ce:/sy/myapp_v1",
+            "http://ibm%2Ecom/ce/ac/ns#resource-group": {
+                "type": "uri",
+                "value": "urn:ce:/"
+            },
+            "http://ibm%2Ecom/ce/ns#active_in": {
+                "type": "uri",
+                "value": "urn:ce:/sy/mysys"
+            },
+            "http://ibm%2Ecom/ce/ns#application_deployment": {
+                "type": "uri",
+                "value": "urn:ce:/sy/myapp"
+            },
+            "http://ibm%2Ecom/ce/ns#asg": {
+                "type": "uri",
+                "value": "urn:ce:/iaas/2.5"
+            },
+            "http://ibm%2Ecom/ce/ns#emergency_contact": {
+                "type": "uri",
+                "value": "urn:ce:/sy/nally@us.ibm.com"
+            },
+            "http://ibm%2Ecom/ce/ns#image": "xdevops/hello",
+            "http://ibm%2Ecom/ce/ns#loadbalancer_rule": "default",
+            "http://ibm%2Ecom/ce/ns#owner": {
+                "type": "uri",
+                "value": "urn:ce:/account/fb#owner"
+            },
+            "http://ibm%2Ecom/ce/ns#state": "In_production",
+            "http://www%2Ew3%2Eorg/1999/02/22-rdf-syntax-ns#type": {
+                "type": "uri",
+                "value": "http://ibm.com/ce/ns#VersionDeployment"
+            },
+            "http://www%2Ew3%2Eorg/2000/01/rdf-schema#label": "myapp_v1"
+            }
+        ],
+        "@id": "urn:ce:/sy/myapp_v1"
+    },
+    {
+    "@graph": [
+        {
+            "@id": "urn:ce:/mt/pepsi",
+            "ce_improvements": [
+                "http://pepsi.localhost:5101/sy/mysys"
+            ],
+            "http://ibm%2Ecom/ce/ac/ns#resource-group": {
+                "type": "uri",
+                "value": "urn:ce:/mt/pepsi"
+            },
+            "http://ibm%2Ecom/ce/ns#owner": {
+                "type": "uri",
+                "value": "urn:ce:/account/fb#owner"
+            },
+            "http://ibm%2Ecom/ce/ns#site_id": "pepsi",
+            "http://purl%2Eorg/dc/terms/title": "pepsi",
+            "http://www%2Ew3%2Eorg/1999/02/22-rdf-syntax-ns#type": {
+                "type": "uri",
+                "value": "http://ibm.com/ce/ns#Site"
+            }
+        },
+        {
+            "@id": "urn:ce:/",
+            "http://ibm%2Ecom/ce/ns#sites": {
+                "type": "uri",
+                "value": "urn:ce:/mt/pepsi"
+                }
+            }
+        ]
+    },
+    {
         "_id": "71562648-6acb-42bc-a182-df6b1f005b09",
         "user_id": 0,
         "name": {
@@ -98,7 +198,8 @@ DOCS = [
             "Ruby",
             "C",
             "Python"
-        ]
+        ],
+        "test" : [{"a":1}, {"b":2}]
     },
     {
         "_id": "12a2800c-4fe2-45a8-8d78-c084f4e242a9",
@@ -124,8 +225,10 @@ DOCS = [
             "Ruby",
             "Python",
             "C",
-            "Python"
-        ]
+            {"Versions": {"Alpha": "Beta"}}
+        ],
+        "http://example%2Ecom/ex/ns#color\\s" :"blue/whit\\e",
+        "test" : [{"a":1, "b":2}]
     },
     {
         "_id": "48ca0455-8bd0-473f-9ae2-459e42e3edd1",
@@ -150,7 +253,8 @@ DOCS = [
             "Lisp",
             "Python",
             "Erlang"
-        ]
+        ],
+        "test_in": {"val1" : 1, "val2": "val2"}
     },
     {
         "_id": "0461444c-e60a-457d-a4bb-b8d811853f21",
@@ -171,7 +275,11 @@ DOCS = [
         "company": "Tasmania",
         "email": "madelynsoto@tasmania.com",
         "manager": True,
-        "favorites": [
+        "favorites": [[
+            "Ruby",
+            "C",
+            "Python"
+        ],
             "Erlang",
             "C",
             "Erlang"
@@ -279,7 +387,9 @@ DOCS = [
             "Ruby",
             "Ruby",
             "Erlang"
-        ]
+        ],
+        "exists_field" : "should_exist1"
+
     },
     {
         "_id": "6c0afcf1-e57e-421d-a03d-0c0717ebf843",
@@ -305,7 +415,8 @@ DOCS = [
             "C",
             "Ruby",
             "C"
-        ]
+        ],
+        "exists_field" : "should_exist2"
     },
     {
         "_id": "954272af-d5ed-4039-a5eb-8ed57e9def01",
@@ -330,7 +441,8 @@ DOCS = [
             "Lisp",
             "Erlang",
             "Python"
-        ]
+        ],
+        "exists_array" : ["should", "exist", "array1"]
     },
     {
         "_id": "e900001d-bc48-48a6-9b1a-ac9a1f5d1a03",
@@ -354,7 +466,9 @@ DOCS = [
         "favorites": [
             "Erlang",
             "Erlang"
-        ]
+        ],
+        "exists_array" : ["should", "exist", "array2"]
+
     },
     {
         "_id": "b06aadcf-cd0f-4ca6-9f7e-2c993e48d4c4",
@@ -381,7 +495,8 @@ DOCS = [
             "C",
             "C++",
             "C++"
-        ]
+        ],
+        "exists_object" : {"should": "object"}
     },
     {
         "_id": "5b61abc1-a3d3-4092-b9d7-ced90e675536",
@@ -406,7 +521,8 @@ DOCS = [
             "C",
             "Python",
             "Lisp"
-        ]
+        ],
+        "exists_object" : {"should": "object"}
     },
     {
         "_id": "b1e70402-8add-4068-af8f-b4f3d0feb049",
