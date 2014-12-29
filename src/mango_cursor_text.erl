@@ -54,7 +54,7 @@ execute(#cursor{db = Db, index = Idx, limit=Limit, opts=Opts} = Cursor0,
     DbName = Db#db.name,
     DDoc = ddocid(Idx),
     IndexName = mango_idx:name(Idx),
-    Query = mango_text_selector:parse_selector(Cursor0#cursor.selector),
+    Query = mango_selector_text:convert(Cursor0#cursor.selector),
     SortQuery = sort_query(Opts),
     Bookmark0 = case get_bookmark(Opts) of
         <<>> -> nil;
