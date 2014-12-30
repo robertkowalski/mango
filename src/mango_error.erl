@@ -274,36 +274,37 @@ info(mango_sort, {unsupported, mixed_sort}) ->
         <<"Sorts currently only support a single direction for all fields.">>
     };
 
-info(mango_text_selector, {bad_arg, Op, Arg}) ->
+info(mango_selector_text, {bad_arg, Op, Arg}) ->
     {
         400,
         <<"bad_arg">>,
         fmt("Bad argument for text search operator ~s: ~w", [Op, Arg])
     };
-info(mango_text_selector, {not_supported, Op}) ->
+info(mango_selector_text, {not_supported, Op}) ->
     {
         400,
         <<"not_supported">>,
         fmt("Unsupported text search operator: ~s", [Op])
     };
-info(mango_text_selector, {invalid_operator, Op}) ->
+info(mango_selector_text, {invalid_operator, Op}) ->
     {
         400,
         <<"invalid_operator">>,
         fmt("Invalid text operator: ~s", [Op])
     };
-info(mango_text_selector, {invalid_selector, Arg}) ->
+info(mango_selector_text, {invalid_selector, Arg}) ->
     {
         400,
         <<"invalid_selector">>,
         fmt("Selector was invalid: ~w.", [Arg])
     };
-info(mango_text_selector, {no_usable_index, operator_unsupported}) ->
+info(mango_selector_text, {no_usable_index, operator_unsupported}) ->
     {
         400,
         <<"no_usable_index">>,
         <<"There is no operator in this selector can used with an index.">>
     };
+
 info(mango_util, {invalid_ddoc_lang, Lang}) ->
     {
         400,
