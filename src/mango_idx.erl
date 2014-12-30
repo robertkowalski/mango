@@ -82,7 +82,7 @@ for_sort_int(Indexes, Sort) ->
             {<<"json">>, _} ->
                 lists:prefix(Fields, Cols);
             {<<"special">>, _} ->
-                Fields == [<<"_id">>]
+                lists:prefix(Fields, Cols)
         end
     end,
     SortIndexes = lists:filter(FilterFun, Indexes),
