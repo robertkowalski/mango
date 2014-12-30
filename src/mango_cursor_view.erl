@@ -1,7 +1,8 @@
 -module(mango_cursor_view).
 
 -export([
-    execute/3, create/3
+    create/4,
+    execute/3
 ]).
 
 -export([

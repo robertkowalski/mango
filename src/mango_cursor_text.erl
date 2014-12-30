@@ -1,7 +1,7 @@
 -module(mango_cursor_text).
 
 -export([
-    create/3,
+    create/4,
     execute/3
 ]).
 
@@ -16,10 +16,7 @@ create(Db, Index, Selector, Opts) ->
     % Limit the result set size to 50 for Clouseau's
     % sake. We may want to revisit this.
     Limit0 = couch_util:get_value(limit, Opts, 50),
-    Limit = case Limit > 50 of
-        true -> 50;
-        false -> Limit
-    end,
+    Limit = if Limit0 < 50 -> Limit0; true -> 50 end,
     Skip = couch_util:get_value(skip, Opts, 0),
     Fields = couch_util:get_value(fields, Opts, all_fields),
 
@@ -39,13 +36,14 @@ execute(Cursor, UserFun, UserAcc) ->
     #cursor{
         db = Db,
         index = Idx,
-        limit=Limit,
-        opts=Opts
+        limit = Limit,
+        selector = Selector,
+        opts = Opts
     } = Cursor,
     DbName = Db#db.name,
     DDoc = ddocid(Idx),
     IndexName = mango_idx:name(Idx),
-    Query = mango_selector_text:convert(Cursor0#cursor.selector),
+    Query = mango_selector_text:convert(Selector),
     SortQuery = sort_query(Opts),
     Bookmark0 = case get_bookmark(Opts) of
         <<>> -> nil;
@@ -60,7 +58,7 @@ execute(Cursor, UserFun, UserAcc) ->
     },
     case dreyfus_fabric_search:go(DbName, DDoc, IndexName, QueryArgs) of
         {ok, Bookmark1, _, Hits0, _, _} ->
-            Hits = hits_to_json(DbName, Hits0, Cursor0#cursor.selector),
+            Hits = hits_to_json(DbName, Hits0, Selector),
             Bookmark = dreyfus_fabric_search:pack_bookmark(Bookmark1),
             {ok, UserAcc1} = UserFun({add_key, bookmark, Bookmark}, UserAcc),
             try
@@ -109,45 +107,6 @@ ddocid(Idx) ->
             Rest;
         Else ->
             Else
-    end.
-
-
-find_usable_indexes(Possible, []) ->
-    ?MANGO_ERROR({no_usable_index, {fields, Possible}});
-%% If the user did not specify any fields, then return all existing text indexes
-find_usable_indexes([<<"$default">>], Existing) ->
-    Existing;
-find_usable_indexes(Possible, Existing) ->
-    Usable = lists:foldl(fun(Idx, Acc) ->
-        Columns = mango_idx:columns(Idx),
-        %% Check to see if any of the Columns exist in our Possible Fields
-        case sets:is_subset(sets:from_list(Possible),
-            sets:from_list(Columns)) of
-            true ->
-                [Idx | Acc];
-            false ->
-                Acc
-        end
-    end, [], Existing),
-    if length(Usable) > 0 -> ok; true ->
-        ?MANGO_ERROR({no_usable_index, {fields, Possible}})
-    end,
-    Usable.
-
-
-%% If no field list exists, we choose the an index that has <<"all_fields">>
-%% or any of the text indexes
-choose_best_index(Indexes, IndexFields) ->
-    case IndexFields of
-        [<<"$default">>] ->
-            lists:foldl(fun(Idx, Acc) ->
-                case mango_idx:columns(Acc) of
-                    all_fields -> Idx;
-                    _ -> Acc
-                end
-            end, hd(Indexes), Indexes);
-        _ ->
-            hd(Indexes)
     end.
 
 

@@ -3,8 +3,7 @@
 
 -export([
     create/3,
-    execute/3,
-    get_sort_indexes/3
+    execute/3
 ]).
 
 
@@ -31,7 +30,7 @@ create(Db, Selector0, Opts) ->
     Index = choose_best(UsableIndexes, Selector, Opts),    
 
     Mod = mango_idx:cursor_mod(Index),
-    Mod:Create(Db, Index, Selector, Opts).
+    Mod:create(Db, Index, Selector, Opts).
 
 
 execute(#cursor{index=Idx}=Cursor, UserFun, UserAcc) ->

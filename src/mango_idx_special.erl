@@ -8,6 +8,8 @@
     from_ddoc/1,
     to_json/1,
     columns/1,
+    is_usable/2,
+    priority/3,
     start_key/1,
     end_key/1
 ]).
@@ -50,12 +52,12 @@ columns(#idx{def=all_docs}) ->
     [<<"_id">>].
 
 
-is_usable(#idx{def=all_docs}, Selector) ->
-    false.
+is_usable(#idx{def=all_docs}, _Selector) ->
+    true.
 
 
-priority(#idx{def=all_docs}, Selector, Opts) ->
-    {1, 1}.
+priority(#idx{def=all_docs}, _Selector, _Opts) ->
+    {2, 1}.
 
 
 start_key([{'$gt', Key, _, _}]) ->

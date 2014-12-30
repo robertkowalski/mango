@@ -7,7 +7,7 @@
 
 -export([
     list/1,
-    filter_list/2,
+    for_sort/2,
 
     new/2,
     validate/1,
@@ -51,16 +51,6 @@ list(Db) ->
     Special ++ lists:flatmap(fun(Doc) ->
         from_ddoc(Db, Doc)
     end, DDocs).
-
-%% Filter our index list based on the types provided
-filter_list(Indexes, Types) ->
-    Pred = fun (Index) ->
-        case lists:member(Index#idx.type, Types) of
-            true -> true;
-            _ -> false
-        end
-    end,
-    lists:filter(Pred, Indexes).
 
 
 for_sort(Indexes, Opts) ->
@@ -198,7 +188,7 @@ columns(#idx{}=Idx) ->
 
 is_usable(#idx{}=Idx, Selector) ->
     Mod = idx_mod(Idx),
-    Mod:is_usable(Idx, Selector)
+    Mod:is_usable(Idx, Selector).
 
 
 priority(#idx{}=Idx, Selector, Opts) ->
