@@ -79,8 +79,10 @@ for_sort_int(Indexes, Sort) ->
                 true;
             {<<"text">>, _} ->
                 sets:is_subset(sets:from_list(Fields), sets:from_list(Cols));
-            {<<"view">>, _} ->
-                lists:prefix(Fields, Cols)
+            {<<"json">>, _} ->
+                lists:prefix(Fields, Cols);
+            {<<"special">>, _} ->
+                Fields == [<<"_id">>]
         end
     end,
     SortIndexes = lists:filter(FilterFun, Indexes),
