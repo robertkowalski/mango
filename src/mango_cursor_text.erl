@@ -91,6 +91,7 @@ execute(#cursor{db = Db, index = Idx, limit=Limit, opts=Opts} = Cursor0,
             ?MANGO_ERROR({text_search_error, {error, Reason}})
     end.
 
+
 %% Convert Query to Dreyfus sort specifications
 %% Covert <<"Field">>, <<"desc">> to <<"-Field">>
 %% and append to the dreyfus query
@@ -145,6 +146,7 @@ find_usable_indexes(Possible, Existing) ->
     end,
     Usable.
 
+
 %% If no field list exists, we choose the an index that has <<"all_fields">>
 %% or any of the text indexes
 choose_best_index(Indexes, IndexFields) ->
@@ -160,6 +162,7 @@ choose_best_index(Indexes, IndexFields) ->
             hd(Indexes)
     end.
 
+
 hits_to_json(DbName, Hits, Selector) ->
     {Ids, HitData} = lists:unzip(lists:map(fun get_hit_data/1, Hits)),
     {ok, JsonDocs0} = dreyfus_fabric:get_json_docs(DbName, Ids),
@@ -167,6 +170,7 @@ hits_to_json(DbName, Hits, Selector) ->
     lists:zipwith(fun({Id, Order, Fields}, {Id, Doc}) ->
         {[{id, Id}, {order, Order}, {fields, {Fields}}, Doc]}
     end, HitData, JsonDocs).
+
 
 get_hit_data(Hit) ->
     Id = couch_util:get_value(<<"_id">>, Hit#hit.fields),
