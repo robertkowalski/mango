@@ -153,7 +153,7 @@ end_find_resp(Resp0, KVs) ->
     end, ["\r\n]"], KVs),
     Chunk = lists:reverse(FinalAcc, ["}\r\n"]),
     {ok, Resp1} = chttpd:send_delayed_chunk(Resp0, Chunk),
-    chttpd:end_delayed_response(Resp1).
+    chttpd:end_delayed_json_response(Resp1).
 
 
 run_find(Resp, Db, Sel, Opts) ->
