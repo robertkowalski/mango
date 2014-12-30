@@ -71,22 +71,18 @@ execute(#cursor{db = Db, index = Idx, limit=Limit, opts=Opts} = Cursor0,
         {ok, Bookmark1, _, Hits0, _, _} ->
             Hits = hits_to_json(DbName, Hits0, Cursor0#cursor.selector),
             Bookmark = dreyfus_fabric_search:pack_bookmark(Bookmark1),
-            UserAcc1 = try UserFun({row, {[{bookmark, Bookmark}]}}, UserAcc) of
-                {ok, NewAcc} -> NewAcc;
-                {stop, Acc} -> Acc
+            {ok, UserAcc1} = UserFun({add_key, bookmark, Bookmark}, UserAcc),
+            try
+                lists:foldl(fun(Hit, Acc) ->
+                    case UserFun({row, Hit}, Acc) of
+                        {ok, NewAcc} -> NewAcc;
+                        {stop, NewAcc} -> throw({stop, NewAcc})
+                    end
+                end, UserAcc1, Hits)
             catch
-                error:{error, Error}  -> ?MANGO_ERROR({text_search_error,
-                    {error, Error}})
-            end,
-            {ok, lists:foldl(fun(Hit, HAcc) ->
-                try UserFun({row, Hit}, HAcc) of
-                    {ok, HNewAcc} -> HNewAcc;
-                    {stop, HAcc} -> HAcc
-                catch
-                    error:{error, HError}  -> ?MANGO_ERROR({text_search_error,
-                        {error, HError}})
-                end
-            end, UserAcc1, Hits)};
+                throw:{stop, FinalAcc} ->
+                    {ok, FinalAcc}
+            end;
         {error, Reason} ->
             ?MANGO_ERROR({text_search_error, {error, Reason}})
     end.
