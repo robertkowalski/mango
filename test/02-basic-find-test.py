@@ -1,14 +1,8 @@
 
 import mango
-import user_docs
 
 
-class BasicFindTests(mango.DbPerClass):
-    
-    @classmethod
-    def setUpClass(klass):
-        super(BasicFindTests, klass).setUpClass()
-        user_docs.setup(klass.db)
+class BasicFindTests(mango.UserDocsTests):
     
     def test_bad_selector(self):
         bad_selectors = [
