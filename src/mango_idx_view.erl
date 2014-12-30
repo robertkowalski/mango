@@ -12,6 +12,7 @@
     priority/3,
     start_key/1,
     end_key/1,
+    indexable_fields/1,
     field_ranges/1
 ]).
 
