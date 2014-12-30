@@ -12,30 +12,16 @@
 -include("mango.hrl").
 
 
-create(Db, Selector0, Opts) ->
-    Selector = mango_selector:normalize(Selector0),
-    Fields = case couch_util:get_value(fields, Opts, all_fields) of
-        all_fields -> [];
-        <<"all_fields">> -> [];
-        Else -> Else
-    end,
-    IndexFields = [<<"$default">> | Fields],
-    ExistingIndexes = mango_idx:filter_list(mango_idx:list(Db), [<<"text">>]),
-    UsableIndexes = find_usable_indexes(IndexFields, ExistingIndexes),
-    if UsableIndexes /= [] -> ok; true ->
-        ?MANGO_ERROR({no_usable_index, operator_unsupported})
-    end,
-    SortIndexes = mango_cursor:get_sort_indexes(ExistingIndexes, UsableIndexes,
-        Opts),
-    Index = choose_best_index(SortIndexes, IndexFields),
-    Limit = couch_util:get_value(limit, Opts, 50),
-    %% Currently set the Limit at 50. We want to set this
-    %% in mango_opts to be consistent with view queries.
-    CapLimit = case Limit > 50 of
+create(Db, Index, Selector, Opts) ->
+    % Limit the result set size to 50 for Clouseau's
+    % sake. We may want to revisit this.
+    Limit0 = couch_util:get_value(limit, Opts, 50),
+    Limit = case Limit > 50 of
         true -> 50;
         false -> Limit
     end,
     Skip = couch_util:get_value(skip, Opts, 0),
+    Fields = couch_util:get_value(fields, Opts, all_fields),
 
     {ok, #cursor{
         db = Db,
@@ -43,14 +29,19 @@ create(Db, Selector0, Opts) ->
         ranges = null,
         selector = Selector,
         opts = Opts,
-        limit = CapLimit,
+        limit = Limit,
         skip = Skip,
-        fields = IndexFields
+        fields = Fields
     }}.
 
 
-execute(#cursor{db = Db, index = Idx, limit=Limit, opts=Opts} = Cursor0,
-        UserFun, UserAcc) ->
+execute(Cursor, UserFun, UserAcc) ->
+    #cursor{
+        db = Db,
+        index = Idx,
+        limit=Limit,
+        opts=Opts
+    } = Cursor,
     DbName = Db#db.name,
     DDoc = ddocid(Idx),
     IndexName = mango_idx:name(Idx),

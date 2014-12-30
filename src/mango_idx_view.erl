@@ -9,7 +9,8 @@
     to_json/1,
     columns/1,
     start_key/1,
-    end_key/1
+    end_key/1,
+    field_ranges/1
 ]).
 
 
@@ -90,6 +91,28 @@ columns(Idx) ->
     [Key || {Key, _} <- Fields].
 
 
+is_usable(Idx, Selector) ->
+    % This index is usable if at least the first column is
+    % a member of the indexable fields of the selector.
+    Columns = columns(Idx),
+    Fields = indexable_fields(Selector),
+    lists:member(hd(Columns), Fields).
+
+
+priority(Idx, Selector, Opts) ->
+    IndexFields = mango_selector:index_fields(Selector),
+    FieldRanges = find_field_ranges(Selector, IndexFields),
+    case FieldRanges of
+        [{Field, empty}] ->
+            % Make this one super priority because
+            % we know its an empty result set
+            {infinity, infinity};
+        _ ->
+            Cols = columns(Idx),
+            {1, column_prefix_length(Cols, FieldRanges)}
+    end.
+
+
 start_key([]) ->
     [];
 start_key([{'$gt', Key, _, _} | Rest]) ->
@@ -159,3 +182,288 @@ make_view(Idx) ->
         {<<"options">>, {Idx#idx.opts}}
     ]},
     {Idx#idx.name, View}.
+
+
+% This function returns a list of indexes that
+% can be used to restrict this query. This works by
+% searching the selector looking for field names that
+% can be "seen".
+%
+% Operators that can be seen through are '$and' and any of
+% the logical comparisons ('$lt', '$eq', etc). Things like
+% '$regex', '$in', '$nin', and '$or' can't be serviced by
+% a single index scan so we disallow them. In the future
+% we may become more clever and increase our ken such that
+% we will be able to see through these with crafty indexes
+% or new uses for existing indexes. For instance, I could
+% see an '$or' between comparisons on the same field becoming
+% the equivalent of a multi-query. But that's for another
+% day.
+
+% We can see through '$and' trivially
+indexable_fields({[{<<"$and">>, Args}]}) ->
+    lists:usort(lists:flatten([index_fields(A) || A <- Args]));
+
+% So far we can't see through any other operator
+indexable_fields({[{<<"$", _/binary>>, _}]}) ->
+    [];
+
+% If we have a field with a terminator that is locatable
+% using an index then the field is a possible index
+indexable_fields({[{Field, Cond}]}) ->
+    case indexable(Cond) of
+        true ->
+            [Field];
+        false ->
+            []
+    end;
+
+% An empty selector
+indexable_fields({[]}) ->
+    [].
+
+
+% Check if a condition is indexable. The logical
+% comparisons are mostly straight forward. We
+% currently don't understand '$in' which is
+% theoretically supportable. '$nin' and '$ne'
+% aren't currently supported because they require
+% multiple index scans.
+indexable({[{<<"$lt">>, _}]}) ->
+    true;
+indexable({[{<<"$lte">>, _}]}) ->
+    true;
+indexable({[{<<"$eq">>, _}]}) ->
+    true;
+indexable({[{<<"$gt">>, _}]}) ->
+    true;
+indexable({[{<<"$gte">>, _}]}) ->
+    true;
+
+% All other operators are currently not indexable.
+% This is also a subtle assertion that we don't
+% call indexable/1 on a field name.
+indexable({[{<<"$", _/binary>>, _}]}) ->
+    false.
+
+
+% For each field, return {Field, Range}
+field_ranges(Selector) ->
+    Fields = indexable_fields(Selector),
+    field_ranges(Selector, Fields).
+
+
+field_ranges(Selector, Fields) ->
+    field_ranges(Selector, Fields, []).
+
+
+field_ranges(_Selector, [], Acc) ->
+    lists:reverse(Acc);
+field_ranges(Selector, [Field | Rest], Acc) ->
+    case range(Selector, Field) of
+        empty ->
+            [{Field, empty}];
+        Range ->
+            field_ranges(Selector, Rest, [{Field, Range} | Acc])
+    end.
+
+
+% Find the complete range for a given index in this
+% selector. This works by AND'ing logical comparisons
+% together so that we can define the start and end
+% keys for a given index.
+%
+% Selector must have been normalized before calling
+% this function.
+range(Selector, Index) ->
+    range(Selector, Index, '$gt', mango_json:min(), '$lt', mango_json:max()).
+
+
+% Adjust Low and High based on values found for the
+% givend Index in Selector.
+range({[{<<"$and">>, Args}]}, Index, LCmp, Low, HCmp, High) ->
+    lists:foldl(fun
+        (Arg, {LC, L, HC, H}) ->
+            range(Arg, Index, LC, L, HC, H);
+        (_Arg, empty) ->
+            empty
+    end, {LCmp, Low, HCmp, High}, Args);
+
+% We can currently only traverse '$and' operators
+range({[{<<"$", _/binary>>}]}, _Index, LCmp, Low, HCmp, High) ->
+    {LCmp, Low, HCmp, High};
+
+% If the field name matches the index see if we can narrow
+% the acceptable range.
+range({[{Index, Cond}]}, Index, LCmp, Low, HCmp, High) ->
+    range(Cond, LCmp, Low, HCmp, High);
+
+% Else we have a field unrelated to this index so just
+% return the current values.
+range(_, _, LCmp, Low, HCmp, High) ->
+    {LCmp, Low, HCmp, High}.
+
+
+% The comments below are a bit cryptic at first but they show
+% where the Arg cand land in the current range.
+%
+% For instance, given:
+%
+%     {$lt: N}
+%     Low = 1
+%     High = 5
+%
+% Depending on the value of N we can have one of five locations
+% in regards to a given Low/High pair:
+%
+%     min low mid high max
+%
+%   That is:
+%       min = (N < Low)
+%       low = (N == Low)
+%       mid = (Low < N < High)
+%       high = (N == High)
+%       max = (High < N)
+%
+% If N < 1, (min) then the effective range is empty.
+%
+% If N == 1, (low) then we have to set the range to empty because
+% N < 1 && N >= 1 is an empty set. If the operator had been '$lte'
+% and LCmp was '$gte' or '$eq' then we could keep around the equality
+% check on Arg by setting LCmp == HCmp = '$eq' and Low == High == Arg.
+%
+% If 1 < N < 5 (mid), then we set High to Arg and Arg has just
+% narrowed our range. HCmp is set the the '$lt' operator that was
+% part of the input.
+%
+% If N == 5 (high), We just set HCmp to '$lt' since its guaranteed
+% to be equally or more restrictive than the current possible values
+% of '$lt' or '$lte'.
+%
+% If N > 5 (max), nothing changes as our current range is already
+% more narrow than the current condition.
+%
+% Obviously all of that logic gets tweaked for the other logical
+% operators but its all straight forward once you figure out how
+% we're basically just narrowing our logical ranges.
+
+range({[{<<"$lt">>, Arg}]}, LCmp, Low, HCmp, High) ->
+    case range_pos(Low, Arg, High) of
+        min ->
+            empty;
+        low ->
+            empty;
+        mid ->
+            {LCmp, Low, '$lt', Arg};
+        high ->
+            {LCmp, Low, '$lt', Arg};
+        max ->
+            {LCmp, Low, HCmp, High}
+    end;
+
+range({[{<<"$lte">>, Arg}]}, LCmp, Low, HCmp, High) ->
+    case range_pos(Low, Arg, High) of
+        min ->
+            empty;
+        low when LCmp == '$gte'; LCmp == '$eq' ->
+            {'$eq', Arg, '$eq', Arg};
+        low ->
+            empty;
+        mid ->
+            {LCmp, Low, '$lte', Arg};
+        high ->
+            {LCmp, Low, HCmp, High};
+        max ->
+            {LCmp, Low, HCmp, High}
+    end;
+
+range({[{<<"$eq">>, Arg}]}, LCmp, Low, HCmp, High) ->
+    case range_pos(Low, Arg, High) of
+        min ->
+            empty;
+        low when LCmp == '$gte'; LCmp == '$eq' ->
+            {'$eq', Arg, '$eq', Arg};
+        low ->
+            empty;
+        mid ->
+            {'$eq', Arg, '$eq', Arg};
+        high when HCmp == '$lte'; HCmp == '$eq' ->
+            {'$eq', Arg, '$eq', Arg};
+        high ->
+            empty;
+        max ->
+            empty
+    end;
+
+range({[{<<"$gte">>, Arg}]}, LCmp, Low, HCmp, High) ->
+    case range_pos(Low, Arg, High) of
+        min ->
+            {LCmp, Low, HCmp, High};
+        low ->
+            {LCmp, Low, HCmp, High};
+        mid ->
+            {'$gte', Arg, HCmp, High};
+        high when HCmp == '$lte'; HCmp == '$eq' ->
+            {'$eq', Arg, '$eq', Arg};
+        high ->
+            empty;
+        max ->
+            empty
+    end;
+
+range({[{<<"$gt">>, Arg}]}, LCmp, Low, HCmp, High) ->
+    case range_pos(Low, Arg, High) of
+        min ->
+            {LCmp, Low, HCmp, High};
+        low ->
+            {'$gt', Arg, HCmp, High};
+        mid ->
+            {'$gt', Arg, HCmp, High};
+        high ->
+            empty;
+        max ->
+            empty
+    end;
+
+% There's some other un-indexable restriction on the index
+% that will be applied as a post-filter. Ignore it and
+% carry on our merry way.
+range({[{<<"$", _/binary>>, _}]}, LCmp, Low, HCmp, High) ->
+    {LCmp, Low, HCmp, High}.
+
+
+% Returns the value min | low | mid | high | max depending
+% on how Arg compares to Low and High.
+range_pos(Low, Arg, High) ->
+    case mango_json:cmp(Arg, Low) of
+        N when N < 0 -> min;
+        N when N == 0 -> low;
+        _ ->
+            case mango_json:cmp(Arg, High) of
+                X when X < 0 ->
+                    mid;
+                X when X == 0 ->
+                    high;
+                _ ->
+                    max
+            end
+    end.
+
+
+% Return the length of the prefix of indexed
+% columns that this index could use to
+% service the given field ranges.
+column_prefix_length(Idx, FieldRanges) ->
+    Cols = mango_idx:columns(Idx),
+    column_prefix_length_int(Cols, FieldRanges).
+
+
+column_prefix_length_int([], _) ->
+    0;
+column_prefix_length_int([Col | Rest], Ranges) ->
+    case lists:keyfind(Col, 1, Ranges) of
+        {Col, _} ->
+            1 + column_prefix_length_int(Rest, Ranges);
+        false ->
+            0
+    end.

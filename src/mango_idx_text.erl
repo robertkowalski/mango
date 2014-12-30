@@ -83,13 +83,36 @@ to_json(Idx) ->
 columns(Idx) ->
     {Props} = Idx#idx.def,
     {<<"fields">>, Fields} = lists:keyfind(<<"fields">>, 1, Props),
-    case Fields of
+    case Fields of ->
         <<"all_fields">> ->
             all_fields;
         _ ->
-            [{FieldName, FieldType} || {[{_, FieldName},
-                {_, FieldType}, _]} <- Fields]
+            {DFProps} = couch_util:get_value(<<"default_field">>, Props, {[]}),
+            Enabled = couch_util:get_value(<<"enabled">>, DFProps, true),
+            Default = case Enabled of
+                true -> [<<"$default">>];
+                false -> []
+            end,
+            Default ++ lists:map(fun({FProps}) ->
+                {_, Name} = lists:keyfind(<<"name">>, 1, FProps),
+                {_, Type} = lists:keyfind(<<"type">>, 1, FProps),
+                iolist_to_binary([Name, ":", Type])
+            end, Fields)
     end.
+
+
+is_usable(Idx, Selector) ->
+    case columns(Idx) of
+        all_fields ->
+            true;
+        Cols ->
+            Fields = mango_idx:fields(Selector),
+            sets:is_subset(sets:from_list(Fields), sets:from_list(Cols))
+    end.
+
+
+priority(_Idx, _Selector, _Opts) ->
+    {0, 1}.
 
 
 do_validate({Props}) ->

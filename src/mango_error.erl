@@ -20,14 +20,13 @@ info(mango_cursor, {no_usable_index, {sort, Fields}}) ->
         <<"no_usable_index">>,
         fmt("No index exists for this sort, try indexing: ~s", [S1])
     };
-
-info(mango_cursor_text, {no_usable_index, operator_unsupported}) ->
+info(mango_cursor, {no_usable_index, selector_unsupported}) ->
     {
         400,
         <<"no_usable_index">>,
-        <<"There is no operator in this selector that can used with a text
-            index.">>
+        <<"There is no index available for this selector.">>
     };
+
 info(mango_cursor_text, {no_usable_index, {fields, Possible}}) ->
     S0 = [binary_to_list(P) || P <- Possible],
     S1 = string:join(S0, ", "),

@@ -50,6 +50,14 @@ columns(#idx{def=all_docs}) ->
     [<<"_id">>].
 
 
+is_usable(#idx{def=all_docs}, Selector) ->
+    false.
+
+
+priority(#idx{def=all_docs}, Selector, Opts) ->
+    {1, 1}.
+
+
 start_key([{'$gt', Key, _, _}]) ->
     case mango_json:special(Key) of
         true ->
