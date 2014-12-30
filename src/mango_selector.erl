@@ -3,9 +3,7 @@
 
 -export([
     normalize/1,
-    match/2,
-    contains_op/2,
-    index_cursor_type/1
+    match/2
 ]).
 
 
@@ -494,29 +492,3 @@ match({[{Field, Cond}]}, Value, Cmp) ->
 
 match({Props} = Sel, _Value, _Cmp) when length(Props) > 1 ->
     erlang:error({unnormalized_selector, Sel}).
-
-contains_op(Selector, Operators) when is_binary(Selector), is_list(Operators) ->
-    Results = [contains_op(Selector, Operator) || Operator <- Operators],
-    lists:member(true, Results);
-contains_op(Selector, Operator) when is_binary(Selector) ->
-    Selector =:= Operator;
-contains_op(Selector, Operator) when is_list(Selector) ->
-    Elements = lists:map(fun (Arg) ->
-        contains_op(Arg, Operator)
-    end, Selector),
-    lists:member(true, Elements);
-contains_op(Selector, Operator)  when is_tuple(Selector)->
-    Elements = lists:map(fun (Arg) ->
-        contains_op(Arg, Operator)
-    end, tuple_to_list(Selector)),
-    lists:member(true, Elements);
-contains_op(_, _) ->
-    false.
-
-index_cursor_type(Selector) ->
-    IndexFields = mango_selector:index_fields(Selector),
-    case {IndexFields, contains_op(Selector, <<"$text">>)} of
-        {_, true} -> mango_cursor_text;
-        {[], _} -> mango_cursor_text;
-        {_, false} -> mango_cursor_view
-    end.
