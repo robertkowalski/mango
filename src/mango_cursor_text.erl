@@ -164,10 +164,13 @@ hits_to_json(DbName, Hits, Selector) ->
     Ids = lists:map(fun(Hit) ->
         couch_util:get_value(<<"_id">>, Hit#hit.fields)
     end, Hits),
-    {ok, Docs} = dreyfus_fabric:get_json_docs(DbName, Ids),
+    {ok, IdDocs} = dreyfus_fabric:get_json_docs(DbName, Ids),
+    Docs = lists:map(fun({_Id, {doc, Doc}}) ->
+        Doc
+    end, IdDocs),
     filter_text_results(Docs, Selector).
 
 
 filter_text_results(Docs, Selector) ->
-    Pred = fun({_, {doc, Doc}}) -> mango_selector:match(Selector, Doc) end,
+    Pred = fun(Doc) -> mango_selector:match(Selector, Doc) end,
     lists:filter(Pred, Docs).
