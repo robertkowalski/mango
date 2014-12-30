@@ -8,6 +8,8 @@
     from_ddoc/1,
     to_json/1,
     columns/1,
+    is_usable/2,
+    priority/3,
     start_key/1,
     end_key/1,
     field_ranges/1
@@ -99,11 +101,11 @@ is_usable(Idx, Selector) ->
     lists:member(hd(Columns), Fields).
 
 
-priority(Idx, Selector, Opts) ->
+priority(Idx, Selector, _Opts) ->
     IndexFields = mango_selector:index_fields(Selector),
-    FieldRanges = find_field_ranges(Selector, IndexFields),
+    FieldRanges = field_ranges(Selector, IndexFields),
     case FieldRanges of
-        [{Field, empty}] ->
+        [{_Field, empty}] ->
             % Make this one super priority because
             % we know its an empty result set
             {infinity, infinity};
@@ -202,7 +204,7 @@ make_view(Idx) ->
 
 % We can see through '$and' trivially
 indexable_fields({[{<<"$and">>, Args}]}) ->
-    lists:usort(lists:flatten([index_fields(A) || A <- Args]));
+    lists:usort(lists:flatten([indexable_fields(A) || A <- Args]));
 
 % So far we can't see through any other operator
 indexable_fields({[{<<"$", _/binary>>, _}]}) ->

@@ -7,7 +7,9 @@
     remove/2,
     from_ddoc/1,
     to_json/1,
-    columns/1
+    columns/1,
+    is_usable/2,
+    priority/3
 ]).
 
 
@@ -83,7 +85,7 @@ to_json(Idx) ->
 columns(Idx) ->
     {Props} = Idx#idx.def,
     {<<"fields">>, Fields} = lists:keyfind(<<"fields">>, 1, Props),
-    case Fields of ->
+    case Fields of
         <<"all_fields">> ->
             all_fields;
         _ ->
