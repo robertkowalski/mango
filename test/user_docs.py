@@ -38,18 +38,11 @@ With this pattern:
 ]
 """
 
+
 import copy
-import time
-
-import mango
 
 
-def mkdb():
-    return mango.Database("127.0.0.1", "5984", "mango_test")
-
-
-def create_db_and_indexes():
-    db = mkdb()
+def setup(db):
     db.recreate()
     db.save_docs(copy.deepcopy(DOCS))
     indexes = [
