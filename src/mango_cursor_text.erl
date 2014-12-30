@@ -167,6 +167,7 @@ hits_to_json(DbName, Hits, Selector) ->
     {Ids, HitData} = lists:unzip(lists:map(fun get_hit_data/1, Hits)),
     {ok, JsonDocs0} = dreyfus_fabric:get_json_docs(DbName, Ids),
     JsonDocs = filter_text_results(JsonDocs0, Selector),
+    twig:log(err, "HitData:~n  ~p~n  ~p~n", [HitData, JsonDocs]),
     lists:zipwith(fun({Id, Order, Fields}, {Id, Doc}) ->
         {[{id, Id}, {order, Order}, {fields, {Fields}}, Doc]}
     end, HitData, JsonDocs).
@@ -178,17 +179,6 @@ get_hit_data(Hit) ->
     {Id, {Id, Hit#hit.order, Fields}}.
 
 
-%% List of operators that require post search filtering
-get_filter_ops() ->
-    [<<"$elemMatch">>, <<"$exists">>, <<"$mod">>, <<"$type">> , <<"$regex">>].
-
-
 filter_text_results(Docs, Selector) ->
-    case mango_selector:contains_op(Selector, get_filter_ops()) of
-        true ->
-            Pred = fun({_, {doc, Doc}}) -> mango_selector:match(Selector, Doc)
-            end,
-            lists:filter(Pred, Docs);
-        false ->
-            Docs
-    end.
+    Pred = fun({_, {doc, Doc}}) -> mango_selector:match(Selector, Doc) end,
+    lists:filter(Pred, Docs).
