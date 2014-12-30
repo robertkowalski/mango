@@ -203,6 +203,7 @@ add_default_text_field([{_Name, <<"string">>, Value} | Rest], Acc) ->
 add_default_text_field([_ | Rest], Acc) ->
     add_default_text_field(Rest, Acc).
 
+
 %% index of all field names
 get_field_names([], FAcc) ->
     FAcc;
