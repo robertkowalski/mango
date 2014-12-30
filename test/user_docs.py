@@ -41,9 +41,16 @@ With this pattern:
 import copy
 
 
-def setup(db):
+def setup(db, index_type="view"):
     db.recreate()
     db.save_docs(copy.deepcopy(DOCS))
+    if index_type == "view":
+        add_view_indexes(db)
+    elif index_type == "text":
+        add_text_indexes(db)
+
+
+def add_view_indexes(db):
     indexes = [
         ["user_id"],
         ["name.last", "name.first"],
@@ -62,6 +69,10 @@ def setup(db):
     ]
     for idx in indexes:
         assert db.create_index(idx) is True
+
+
+def add_text_indexes(db):
+    db.create_text_index()
 
 
 DOCS = [
