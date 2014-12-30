@@ -452,20 +452,12 @@ range_pos(Low, Arg, High) ->
     end.
 
 
-% Return the length of the prefix of indexed
-% columns that this index could use to
-% service the given field ranges.
-column_prefix_length(Idx, FieldRanges) ->
-    Cols = mango_idx:columns(Idx),
-    column_prefix_length_int(Cols, FieldRanges).
-
-
-column_prefix_length_int([], _) ->
+column_prefix_length([], _) ->
     0;
-column_prefix_length_int([Col | Rest], Ranges) ->
+column_prefix_length([Col | Rest], Ranges) ->
     case lists:keyfind(Col, 1, Ranges) of
         {Col, _} ->
-            1 + column_prefix_length_int(Rest, Ranges);
+            1 + column_prefix_length(Rest, Ranges);
         false ->
             0
     end.
