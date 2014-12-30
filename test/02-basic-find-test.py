@@ -228,3 +228,27 @@ class BasicFindTests(mango.DbPerClass):
         for r in [1, 2, 3]:
             docs = self.db.find({"age": {"$gt": 0}}, r=r)
             assert len(docs) == 15
+
+    def test_empty(self):
+        try:
+            self.db.find({})
+        except Exception, e:
+            assert e.response.status_code == 400
+        else:
+            raise AssertionError("bad find")
+
+    def test_empty_subsel(self):
+        docs = self.db.find({
+                "_id": {"$gt": None},
+                "location": {}
+            })
+        assert len(docs) == 0
+
+    def test_empty_subsel_match(self):
+        self.db.save_docs([{"user_id": "eo", "empty_obj": {}}])
+        docs = self.db.find({
+                "_id": {"$gt": None},
+                "empty_obj": {}
+            })
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == "eo"
