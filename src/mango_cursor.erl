@@ -18,7 +18,7 @@
 create(Db, Selector0, Opts) ->
     Selector = mango_selector:normalize(Selector0),
 
-    ExistingIndexes = mango_idx:list(Db, Selector, Opts),
+    ExistingIndexes = mango_idx:list(Db),
     SortIndexes = mango_idx:for_sort(ExistingIndexes, Opts),
     UsableFilter = fun(I) -> mango_idx:is_usable(I, Selector) end,
     UsableIndexes = lists:filter(UsableFilter, SortIndexes),
