@@ -15,6 +15,7 @@
 -include("mango.hrl").
 -include("mango_idx.hrl").
 
+
 validate(#idx{}=Idx) ->
     {ok, Def} = do_validate(Idx#idx.def),
     {ok, Idx#idx{def=Def}}.
