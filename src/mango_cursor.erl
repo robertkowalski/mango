@@ -27,7 +27,7 @@ create(Db, Selector0, Opts) ->
         ?MANGO_ERROR({no_usable_index, selector_unsupported})
     end,
 
-    Index = choose_best(UsableIndexes, Selector, Opts),    
+    Index = choose_best(UsableIndexes, Selector, Opts),
 
     Mod = mango_idx:cursor_mod(Index),
     Mod:create(Db, Index, Selector, Opts).
