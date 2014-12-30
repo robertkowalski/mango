@@ -15,7 +15,6 @@
 -include("mango.hrl").
 
 create(Db, Index, Selector, Opts) ->
-    Ranges = mango_idx_view:field_ranges(Selector),
     Limit = couch_util:get_value(limit, Opts, 10000000000),
     Skip = couch_util:get_value(skip, Opts, 0),
     Fields = couch_util:get_value(fields, Opts, all_fields),
@@ -23,7 +22,7 @@ create(Db, Index, Selector, Opts) ->
     {ok, #cursor{
         db = Db,
         index = Index,
-        ranges = Ranges,
+        ranges = get_ranges(Index, Selector),
         selector = Selector,
         opts = Opts,
         limit = Limit,
@@ -58,6 +57,23 @@ execute(#cursor{db = Db, index = Idx} = Cursor0, UserFun, UserAcc) ->
             fabric:query_view(Db, DDoc, Name, CB, Cursor, Args)
     end,
     {ok, LastCursor#cursor.user_acc}.
+
+
+get_ranges(Idx, Selector) ->
+    Ranges = mango_idx_view:field_ranges(Selector),
+    Columns = mango_idx:columns(Idx),
+    get_ranges_int(Columns, Ranges).
+
+
+get_ranges_int([], _) ->
+    [];
+get_ranges_int([Col | Rest], Ranges) ->
+    case lists:keyfind(Col, 1, Ranges) of
+        {Col, Range} ->
+            [Range | get_ranges_int(Rest, Ranges)];
+        false ->
+            []
+    end.
 
 
 handle_message({total_and_offset, _, _} = _TO, Cursor) ->
