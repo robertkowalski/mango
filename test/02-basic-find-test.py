@@ -258,3 +258,26 @@ class BasicFindTests(mango.DbPerClass):
         assert docs[3].has_key(u'\uf8ff')
         assert docs[3][u'\uf8ff'] == "apple"
 
+    def test_empty(self):
+        try:
+            self.db.find({})
+        except Exception, e:
+            assert e.response.status_code == 400
+        else:
+            raise AssertionError("bad find")
+
+    def test_empty_subsel(self):
+        docs = self.db.find({
+                "_id": {"$gt": None},
+                "location": {}
+            })
+        assert len(docs) == 0
+
+    def test_empty_subsel_match(self):
+        self.db.save_docs([{"user_id": "eo", "empty_obj": {}}])
+        docs = self.db.find({
+                "_id": {"$gt": None},
+                "empty_obj": {}
+            })
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == "eo"
