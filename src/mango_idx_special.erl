@@ -52,8 +52,9 @@ columns(#idx{def=all_docs}) ->
     [<<"_id">>].
 
 
-is_usable(#idx{def=all_docs}, _Selector) ->
-    true.
+is_usable(#idx{def=all_docs}, Selector) ->
+    Fields = mango_idx_view:indexable_fields(Selector),
+    lists:member(<<"_id">>, Fields).
 
 
 priority(#idx{def=all_docs}, _Selector, _Opts) ->
