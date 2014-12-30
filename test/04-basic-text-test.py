@@ -3,39 +3,29 @@ import mango
 
 
 class BasicTextTests(mango.UserDocsTextTests):
-    def test_text_simple(self):
+    def test_simple(self):
         docs = self.db.find({"$text": "Stephanie"})
-        import pprint
-        pprint.pprint(docs)
         assert len(docs) == 1
-        assert docs[0]["name"]["first"]
+        assert docs[0]["name"]["first"] == "Stephanie"
 
+    def test_with_integer(self):
+        docs = self.db.find({"name.first": "Stephanie", "age": 48})
+        assert len(docs) == 1
+        assert docs[0]["name"]["first"] == "Stephanie"
+        assert docs[0]["age"] == 48
 
-# # Verifies that string, boolean, array, numbers are indexed when no fields
-# # are provided
-# def test_text_index_all():
-#     db = mkdb()
-#     analyzer = "standard"
-#     _id = "index_all"
-#     _name = "test_text_index_all"
-#     ret = db.create_text_index(analyzer, name=_name, ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"$and": [{"$text":"Stephanie"}, {"age":48}]})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["age"] == 48
-#     docs = db.find({"$and": [{"$text":"Stephanie"}, {"manager":False}]})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["manager"] == False
-#     docs = db.find({"$and": [{"$text":"Stephanie"}, {"favorites":["Ruby","C",
-#         "Python"]}]})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["favorites"] == ["Ruby","C","Python"]
-#     db.delete_index(idx["ddoc"], idx["name"], idx_type="text")
-# 
+    def test_with_boolean(self):
+        docs = self.db.find({"name.first": "Stephanie", "manager": False})
+        assert len(docs) == 1
+        assert docs[0]["name"]["first"] == "Stephanie"
+        assert docs[0]["manager"] == False
+
+    def test_with_array(self):
+        faves = ["Ruby", "C", "Python"]
+        docs = self.db.find({"name.first": "Stephanie", "favorites": faves})
+        assert docs[0]["name"]["first"] == "Stephanie"
+        assert docs[0]["favorites"] == faves
+
 # # Verifies a user can selectively choose only a few fields to index
 # def test_text_index_fields_no_default():
 #     db = mkdb()
