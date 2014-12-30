@@ -134,7 +134,11 @@ class Database(object):
             body["fields"] = fields
         body = json.dumps(body)
         r = self.sess.post(self.path("_find"), data=body)
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except:
+            print r.text
+            raise
         return r.json()["docs"]
 
     def find_one(self, *args, **kwargs):
@@ -165,3 +169,10 @@ class UserDocsTests(DbPerClass):
         super(UserDocsTests, klass).setUpClass()
         user_docs.setup(klass.db)
 
+
+class UserDocsTextTests(DbPerClass):
+
+    @classmethod
+    def setUpClass(klass):
+        super(UserDocsTextTests, klass).setUpClass()
+        user_docs.setup(klass.db, index_type="text")
