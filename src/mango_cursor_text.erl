@@ -167,7 +167,6 @@ hits_to_json(DbName, Hits, Selector) ->
     {Ids, HitData} = lists:unzip(lists:map(fun get_hit_data/1, Hits)),
     {ok, JsonDocs0} = dreyfus_fabric:get_json_docs(DbName, Ids),
     JsonDocs = filter_text_results(JsonDocs0, Selector),
-    twig:log(err, "HitData:~n  ~p~n  ~p~n", [HitData, JsonDocs]),
     lists:zipwith(fun({Id, Order, Fields}, {Id, Doc}) ->
         {[{id, Id}, {order, Order}, {fields, {Fields}}, Doc]}
     end, HitData, JsonDocs).
