@@ -1,14 +1,8 @@
 
 import mango
-import user_docs
 
 
-class OperatorTests(mango.DbPerClass):
-    
-    @classmethod
-    def setUpClass(klass):
-        super(OperatorTests, klass).setUpClass()
-        user_docs.setup(klass.db)
+class OperatorTests(mango.UserDocsTests):
 
     def test_all(self):
         docs = self.db.find({

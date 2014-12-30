@@ -6,6 +6,7 @@ import uuid
 
 import requests
 
+import user_docs
 
 def random_db_name():
     return "mango_test_" + uuid.uuid4().hex
@@ -155,3 +156,12 @@ class DbPerClass(unittest.TestCase):
 
     def setUp(self):
         self.db = self.__class__.db
+
+
+class UserDocsTests(DbPerClass):
+
+    @classmethod
+    def setUpClass(klass):
+        super(UserDocsTests, klass).setUpClass()
+        user_docs.setup(klass.db)
+
