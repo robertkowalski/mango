@@ -161,18 +161,11 @@ choose_best_index(Indexes, IndexFields) ->
 
 
 hits_to_json(DbName, Hits, Selector) ->
-    {Ids, HitData} = lists:unzip(lists:map(fun get_hit_data/1, Hits)),
-    {ok, JsonDocs0} = dreyfus_fabric:get_json_docs(DbName, Ids),
-    JsonDocs = filter_text_results(JsonDocs0, Selector),
-    lists:zipwith(fun({Id, Order, Fields}, {Id, Doc}) ->
-        {[{id, Id}, {order, Order}, {fields, {Fields}}, Doc]}
-    end, HitData, JsonDocs).
-
-
-get_hit_data(Hit) ->
-    Id = couch_util:get_value(<<"_id">>, Hit#hit.fields),
-    Fields = lists:keydelete(<<"_id">>, 1, Hit#hit.fields),
-    {Id, {Id, Hit#hit.order, Fields}}.
+    Ids = lists:map(fun(Hit) ->
+        couch_util:get_value(<<"_id">>, Hit#hit.fields)
+    end, Hits),
+    {ok, Docs} = dreyfus_fabric:get_json_docs(DbName, Ids),
+    filter_text_results(Docs, Selector).
 
 
 filter_text_results(Docs, Selector) ->
