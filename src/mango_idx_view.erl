@@ -102,7 +102,7 @@ is_usable(Idx, Selector) ->
 
 
 priority(Idx, Selector, _Opts) ->
-    IndexFields = mango_selector:index_fields(Selector),
+    IndexFields = indexable_fields(Selector),
     FieldRanges = field_ranges(Selector, IndexFields),
     case FieldRanges of
         [{_Field, empty}] ->
