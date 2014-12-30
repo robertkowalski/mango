@@ -73,15 +73,16 @@ execute(#cursor{db = Db, index = Idx, limit=Limit, opts=Opts} = Cursor0,
             Bookmark = dreyfus_fabric_search:pack_bookmark(Bookmark1),
             {ok, UserAcc1} = UserFun({add_key, bookmark, Bookmark}, UserAcc),
             try
-                lists:foldl(fun(Hit, Acc) ->
+                UserAcc2 = lists:foldl(fun(Hit, Acc) ->
                     case UserFun({row, Hit}, Acc) of
                         {ok, NewAcc} -> NewAcc;
                         {stop, NewAcc} -> throw({stop, NewAcc})
                     end
-                end, UserAcc1, Hits)
+                end, UserAcc1, Hits),
+                {ok, UserAcc2}
             catch
-                throw:{stop, FinalAcc} ->
-                    {ok, FinalAcc}
+                throw:{stop, StopAcc} ->
+                    {ok, StopAcc}
             end;
         {error, Reason} ->
             ?MANGO_ERROR({text_search_error, {error, Reason}})
