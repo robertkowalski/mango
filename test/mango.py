@@ -1,8 +1,14 @@
 
 import json
 import time
+import unittest
+import uuid
 
 import requests
+
+
+def random_db_name():
+    return "mango_test_" + uuid.uuid4().hex
 
 
 class Database(object):
@@ -24,10 +30,10 @@ class Database(object):
             parts = [parts]
         return "/".join([self.url] + parts)
 
-    def create(self):
+    def create(self, q=1, n=3):
         r = self.sess.get(self.url)
         if r.status_code == 404:
-            r = self.sess.put(self.url)
+            r = self.sess.put(self.url, params={"q":q, "n": n})
             r.raise_for_status()
 
     def delete(self):
@@ -138,3 +144,14 @@ class Database(object):
             return results[0]
         else:
             return None
+
+
+class DbPerClass(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(klass):
+        klass.db = Database("127.0.0.1", "5984", random_db_name())
+        klass.db.create(q=1, n=3)
+
+    def setUp(self):
+        self.db = self.__class__.db
