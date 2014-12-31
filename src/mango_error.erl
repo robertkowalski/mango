@@ -6,19 +6,23 @@
 ]).
 
 
-info(mango_cursor, {no_usable_index, sort_field}) ->
+info(mango_cursor, {no_usable_index, no_indexes_defined}) ->
     {
         400,
         <<"no_usable_index">>,
-        <<"No index can satisfy both the selector and sort specified.">>
+        <<"There are no indexes defined in this database.">>
     };
-info(mango_cursor, {no_usable_index, {sort, Fields}}) ->
-    S0 = [binary_to_list(F) || F <- Fields],
-    S1 = string:join(S0, ", "),
+info(mango_cursor, {no_usable_index, no_index_matching_name}) ->
     {
         400,
         <<"no_usable_index">>,
-        fmt("No index exists for this sort, try indexing: ~s", [S1])
+        <<"No index matches the specified \"index_name\"">>
+    };
+info(mango_cursor, {no_usable_index, missing_sort_index}) ->
+    {
+        400,
+        <<"no_usable_index">>,
+        <<"No index exists for this sort, try indexing by the sort fields.">>
     };
 info(mango_cursor, {no_usable_index, selector_unsupported}) ->
     {
@@ -207,6 +211,12 @@ info(mango_opts, {invalid_selector_json, BadSel}) ->
         400,
         <<"invalid_selector_json">>,
         fmt("Selector must be a JSON object, not: ~w", [BadSel])
+    };
+info(mango_opts, {invalid_index_name, BadName}) ->
+    {
+        400,
+        <<"invalid_index_name">>,
+        fmt("Invalid index name: ~w", [BadName])
     };
 
 info(mango_opts, {multiple_text_operator, {invalid_selector, BadSel}}) ->
