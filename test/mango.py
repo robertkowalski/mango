@@ -6,7 +6,9 @@ import uuid
 
 import requests
 
+import friend_docs
 import user_docs
+
 
 def random_db_name():
     return "mango_test_" + uuid.uuid4().hex
@@ -176,3 +178,11 @@ class UserDocsTextTests(DbPerClass):
     def setUpClass(klass):
         super(UserDocsTextTests, klass).setUpClass()
         user_docs.setup(klass.db, index_type="text")
+
+
+class FriendDocsTextTests(DbPerClass):
+
+    @classmethod
+    def setUpClass(klass):
+        super(FriendDocsTextTests, klass).setUpClass()
+        friend_docs.setup(klass.db, index_type="text")
