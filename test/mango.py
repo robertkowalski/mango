@@ -139,7 +139,6 @@ class Database(object):
         try:
             r.raise_for_status()
         except:
-            print r.text
             raise
         return r.json()["docs"]
 
