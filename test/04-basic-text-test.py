@@ -1,5 +1,6 @@
 
 import mango
+import user_docs
 
 
 class BasicTextTests(mango.UserDocsTextTests):
@@ -26,275 +27,420 @@ class BasicTextTests(mango.UserDocsTextTests):
         assert docs[0]["name"]["first"] == "Stephanie"
         assert docs[0]["favorites"] == faves
 
-# # Verifies a user can selectively choose only a few fields to index
-# def test_text_index_fields_no_default():
-#     db = mkdb()
-#     analyzer = "standard"
-#     _default_field = {
-#         "enabled": False,
-#         "analyzer": "standard"
-#     }
-#     _fields = [{"field": "name.first", "type": "string", "analyzer" :"keyword"},
-#         {"field": "favorites.[]", "type": "string"},
-#         {"field": "manager", "type": "boolean"},
-#         {"field": "age", "type": "number"}
-#         ]
-#     _id = "index_fields_no_default"
-#     _name = "test_text_index_fields_no_default"
-#     ret = db.create_text_index(analyzer, default_field = _default_field,
-#         fields=_fields, name=_name, ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"$text":"Stephanie"})
-#     assert len(docs) == 1
-#     docs = db.find({"$or" : [{"$text": "Stephanie"},{"company":"Dreamia"}]})
-#     assert len(docs) == 1
-#     docs = db.find({"$or" : [{"$text": "Stephanie"},
-#         {"name.first":"Stephanie"}]})
-#     assert docs[1]["doc"]["name"]["first"] == "Stephanie"
-#     assert len(docs) == 2
-#     docs = db.find({"$or" : [{"$text": "Stephanie"},{"age":31}]})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["age"] == 31
-#     docs = db.find({"$or" : [{"$text": "Stephanie"},{"manager":True}]})
-#     assert len(docs) == 12
-#     assert docs[1]["doc"]["manager"] == True
-#     docs = db.find({"$or" : [{"$text": "Stephanie"},{"favorites":["Ruby", "C",
-#         "Python"]}]})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["favorites"] == ["Ruby", "C", "Python"]
-#     db.delete_index(idx["ddoc"], idx["name"], idx_type="text")
-# 
-# # # Verifies the default analyzer is keyword
-# def test_text_index_default_analyzer():
-#     db = mkdb()
-#     #analyzer = "email"
-#     _id = "index_default_analyzer"
-#     _name = "test_text_index_default_analyzer"
-#     ret = db.create_text_index(name=_name, ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"email":{"$text":"dreamia.com"}})
-#     assert len(docs) == 1
-#     docs = db.find({"email":{"$text":"stephaniekirkland@dreamia.com"}})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["email"] == "stephaniekirkland@dreamia.com"
-#     db.delete_index(idx["ddoc"], idx["name"], idx_type="text")
-# 
-# # # Verifies user can modify default analyzer
-# def test_text_index_modify_default_analyzer():
-#     db = mkdb()
-#     analyzer = "simple"
-#     _id = "modify_default_analyzer"
-#     _name = "test_text_index_modify_default_analyzer"
-#     ret = db.create_text_index(analyzer,name=_name, ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"email":{"$text":"dreamia"}})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["email"] == "stephaniekirkland@dreamia.com"
-#     db.delete_index(idx["ddoc"], idx["name"], idx_type="text")
-# 
-# # # Verify default_field analyzer and per_field analyzer
-# def test_text_index_perfield_default_field_analyzer():
-#     db = mkdb()
-#     analyzer = "keyword"
-#     _id = "perfield_default_field_analyzer"
-#     _name = "test_text_index_perfield_default_field_analyzer"
-#     _default_field = {
-#         "enabled": True,
-#         "analyzer": "keyword"
-#     }
-#     _fields = [{"field": "location.address.street", "type": "string",
-#     "analyzer" :"keyword"},
-#         {"field": "email", "type": "string", "analyzer" : "simple"},
-#         ]
-#     ret = db.create_text_index(analyzer,default_field=_default_field,
-#         fields=_fields,name=_name, ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"$text":"Evergreen"})
-#     assert len(docs) == 1
-#     docs = db.find({"email":{"$text":"dreamia"}})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["email"] == "stephaniekirkland@dreamia.com"
-#     docs = db.find({"location.address.street":{"$text":"Huntington"}})
-#     assert len(docs) == 1
-#     docs = db.find({"location.address.street":{"$text":"Evergreen"}})
-#     assert len(docs) == 1
-#     docs = db.find({"location.address.street":{"$text":"\"Evergreen Avenue\""}})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["location"]["address"]["street"] == "Evergreen Avenue"
-#     db.delete_index(idx["ddoc"], idx["name"], idx_type="text")
-# 
-# 
-# # Test $gte, $lte, $gt, $lt, $or, $and
-# def test_text_comparison_operators():
-#     db = mkdb()
-#     analyzer = "keyword"
-#     _id = "comparison_operators"
-#     _name = "test_text_comparison_operators"
-#     ret = db.create_text_index(analyzer, name=_name,
-#         ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"$or": [{"$text":"Stephanie"},{"$and":
-#         [{"age":{"$lte" : 31}}, {"age":{"$gte": 31}}]}]})
-#     assert len(docs) == 3
-#     assert docs[1]["doc"]["age"] == 31
-#     docs = db.find({"$or": [{"$text":"Floyd"},
-#         {"$and":[{"age":{"$lt" : 42}}, {"age":{"$gt": 0}}]}]})
-#     assert len(docs) == 4
-#     assert docs[1]["doc"]["age"] == 22
-#     assert docs[2]["doc"]["age"] == 33
-#     db.delete_index(_id, _name, idx_type="text")
-# 
-# # Test $in
-# def test_text_in_operator():
-#     db = mkdb()
-#     analyzer = "keyword"
-#     _id = "in_operator"
-#     _name = "test_text_in_operator"
-#     ret = db.create_text_index(analyzer, name=_name,
-#         ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"favorites" : {"$in":["Random Garbage", 52,
-#         {"Versions": {"Alpha": "Beta"}}]}})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["favorites"] == ["Ruby","Python","C",
-#     {"Versions":{"Alpha":"Beta"}}]
-#     docs = db.find({"test_in" : {"$in":[{"val1": 1, "val2": "val2"}]}})
-#     db.delete_index(_id, _name, idx_type="text")
-# 
-# # Test $all
-# def test_text_all_operator():
-#     db = mkdb()
-#     analyzer = "keyword"
-#     _id = "all_operator"
-#     _name = "test_text_all_operator"
-#     ret = db.create_text_index(analyzer, name=_name,
-#         ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"favorites" : {"$all":["Ruby", "C", "Python",
-#         {"Versions": {"Alpha": "Beta"}}]}})
-#     assert len(docs) == 2
-#     assert docs[1]["doc"]["favorites"] == ["Ruby","Python","C",
-#     {"Versions":{"Alpha":"Beta"}}]
-#     docs = db.find({"favorites" : {"$all":[["Ruby", "C", "Python"]]}})
-#     assert len(docs) == 3
-#     assert docs[1]["doc"]["favorites"] == [["Ruby","C","Python"],"Erlang","C",
-#     "Erlang"]
-#     db.delete_index(_id, _name, idx_type="text")
-# 
-# # Test $exists
-# def test_text_exists_operator():
-#     db = mkdb()
-#     analyzer = "keyword"
-#     _id = "exists_operator"
-#     _name = "test_text_exists_operator"
-#     ret = db.create_text_index(analyzer, name=_name, ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"exists_field":{"$exists": True}})
-#     assert len(docs) == 3
-#     assert docs[1]["doc"]["exists_field"] == "should_exist2"
-#     docs = db.find({"exists_array":{"$exists": True}})
-#     assert len(docs) == 3
-#     assert docs[1]["doc"]["exists_array"] == ["should", "exist", "array1"]
-#     docs = db.find({"exists_object":{"$exists": True}})
-#     assert len(docs) == 3
-#     assert docs[1]["doc"]["exists_object"] == {"should": "object"}
-#     db.delete_index(_id, _name, idx_type="text")
-# 
-# # Test $nor, $not $ne. In mongo, negatives also returns documents that do
-# # not contain the field. Not sure if this is possible with Lucene
-# def test_text_comparison_operators():
-#     db = mkdb()
-#     analyzer = "keyword"
-#     _id = "comparison_operators"
-#     _name = "test_text_comparison_operators"
-#     ret = db.create_text_index(analyzer, name=_name, ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"favorites.[]": {"$not":{"$text":"Ruby"}}})
-#     assert len(docs) == 1
-#     docs = db.find({"$nor": [{"$text":"Stephanie"},
-#         {"$and":[{"age":{"$lte" : 0}}, {"age":{"$gte": 100}}]}]})
-#     assert len(docs) == 1
-#     docs = db.find({"$or": [{"$text":"Stephanie"}, {"age":{"$ne" : 31}}]})
-#     assert len(docs) == 2
-#     db.delete_index(_id, _name, idx_type="text")
-# 
-# # Test $elemMatch
-# def test_text_elemMatch():
-#     db = mkdb()
-#     analyzer = "keyword"
-#     _id = "elemMatch"
-#     _name = "test_text_elemMatch"
-#     ret = db.create_text_index(analyzer, name=_name,
-#         ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"@graph": {"$elemMatch":
-#         {"http://ibm%2Ecom/ce/ns#system_deployment":
-#          {"type": "uri", "value": "urn:ce:/sy/mysys"}}}})
-#     assert len(docs) == 2
-#     assert docs[1]['doc']['@graph'][0]["@id"] == "urn:ce:/sy/myapp"
-#     db.delete_index(_id, _name, idx_type="text")
-# 
-# #Test $elemMatch and $in nested
-# def test_text_elemMatch_nested():
-#     db = mkdb()
-#     analyzer = "keyword"
-#     _id = "elemMatch"
-#     _name = "test_text_elemMatch"
-#     ret = db.create_text_index(analyzer, name=_name, ddoc=_id)
-#     assert ret is True
-#     for idx in db.list_indexes():
-#         if idx["name"] != _name:
-#             continue
-#         assert idx["type"] == "text"
-#     docs = db.find({"$and": [{"@graph": {"$elemMatch":
-#         {"@id": "urn:ce:/","http://ibm%2Ecom/ce/ns#sites":
-#         {"$exists": True}}}},{"@graph": {"$elemMatch": {"$or":
-#         [{"http://ibm%2Ecom/ce/ns#owner": {"type": "uri", "value":
-#         "urn:ce:/account/frankb#owner"}},
-#         {"http://ibm%2Ecom/ce/ac/ns#resource-group": {"$in":
-#         [{"type": "uri", "value": "urn:ce:/"},{"type": "uri", "value":
-#         "urn:ce:/mt/sites"}, {"type": "uri", "value":
-#         "urn:ce:/account"}]}}]}}}]})
-#     assert len(docs) == 2
-#     assert docs[1]['doc']['@graph'][0]["@id"] == "urn:ce:/mt/pepsi"
-#     db.delete_index(_id, _name, idx_type="text")
+    def test_lt(self):
+        docs = self.db.find({"age": {"$lt": 22}})
+        assert len(docs) == 0
+
+        docs = self.db.find({"age": {"$lt": 23}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"age": {"$lt": 33}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"age": {"$lt": 34}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (1, 9)
+ 
+    def test_lte(self):
+        docs = self.db.find({"age": {"$lte": 21}})
+        assert len(docs) == 0
+
+        docs = self.db.find({"age": {"$lte": 22}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"age": {"$lte": 33}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (1, 9)
+    
+    def test_eq(self):
+        docs = self.db.find({"age": 21})
+        assert len(docs) == 0
+        
+        docs = self.db.find({"age": 22})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"age": {"$eq": 22}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"age": 33})
+        assert len(docs) == 0
+
+        docs = self.db.find({"age": 34})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 1
+
+    def test_ne(self):
+        docs = self.db.find({"age": {"$ne": 22}})
+        assert len(docs) == len(user_docs.DOCS) - 1
+        for d in docs:
+            assert d["age"] != 22
+
+        docs = self.db.find({"$not": {"age": 22}})
+        assert len(docs) == len(user_docs.DOCS) - 1
+        for d in docs:
+            assert d["age"] != 22
+
+    def test_gt(self):
+        docs = self.db.find({"age": {"$gt": 77}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (3, 13)
+
+        docs = self.db.find({"age": {"$gt": 78}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 3
+
+        docs = self.db.find({"age": {"$gt": 79}})
+        assert len(docs) == 0
+
+    def test_gte(self):
+        docs = self.db.find({"age": {"$gte": 77}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (3, 13)
+
+        docs = self.db.find({"age": {"$gte": 78}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (3, 13)
+
+        docs = self.db.find({"age": {"$gte": 79}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 3
+
+        docs = self.db.find({"age": {"$gte": 80}})
+        assert len(docs) == 0
+
+    def test_and(self):
+        docs = self.db.find({"age": "22", "manager": True})
+        assert len(docs) == 1
+        assert docs[0] == 9
+        
+        docs = self.db.find({"age": "22", "manager": False})
+        assert len(docs) == 0
+
+        docs = self.db.find({"$and": [{"age": 22}, {"manager": True}]})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"$and": [{"age": 22}, {"manager": False}]})
+        assert len(docs) == 0
+
+        docs = self.db.find({"$text": "Ramona", "age": 22})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"$and": [{"$text": "Ramona"}, {"age": 22}]})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"$and": [{"$text": "Ramona"}, {"$text": "Floyd"}]})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+    def test_or(self):
+        docs = self.db.find({"$or": [{"age": 22}, {"age": 33}]})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (1, 9)
+
+        q = {"$or": [{"$text": "Ramona"}, {"$text": "Stephanie"}]}
+        docs = self.db.find(q)
+        assert len(docs) == 2
+        for d in docs:
+            assert d["uesr_id"] in (1, 9)
+        
+        q = {"$or": [{"$text": "Ramona"}, {"age": 22}]}
+        docs = self.db.find(q)
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+    def test_and_or(self):
+        q = {
+            "age": 22,
+            "$or": [
+                {"manager": False},
+                {"location.state": "Missouri"}
+            ]
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        q = {
+            "$or": [
+                {"age": 22},
+                {"age": 43, "manager": True}
+            ]
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (9, 10)
+
+        q = {
+            "$or": [
+                {"$text": "Ramona"},
+                {"age": 43, "manager": True}
+            ]
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (9, 10)
+
+    def test_nor(self):
+        assert 1 == 0
+
+    def test_in_with_value(self):
+        docs = self.db.find({"age": {"$in": [1, 5]}})
+        assert len(docs) == 0
+
+        docs = self.db.find({"age": {"$in": [1, 5, 22]}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 9
+
+        docs = self.db.find({"age": {"$in": [1, 5, 22, 31]}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (1, 9)
+
+        docs = self.db.find({"age": {"$in": [22, 31]}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (1, 9)
+
+        # Limits on boolean clauses?
+        docs = self.db.find({"age": {"$in": range(1000)}})
+        assert len(docs) == 15
+
+    def test_in_with_array(self):
+        vals = ["Random Garbage", 52, {"Versions": {"Alpha": "Beta"}}]
+        docs = self.db.find({"favorites": {"$in": vals}})
+        assert len(docs) == 1
+        assert docs["user_id"] == 1
+    
+        vals = ["Lisp", "Python"]
+        docs = self.db.find({"favorites": {"$in": vals}})
+        assert len(docs) == 2 # There's more
+
+        vals = [{"val1": 1, "val2": "val2"}]
+        docs = self.db.find({"test_in": {"$in": vals}})
+        assert len(docs) == 1
+        assert docs["user_id"] == 2
+
+    def test_nin_with_value(self):
+        docs = self.db.find({"age": {"$nin": [1, 5]}})
+        assert len(docs) == len(user_docs.DOCS)
+
+        docs = self.db.find({"age": {"$nin": [1, 5, 22]}})
+        assert len(docs) == len(user_docs.DOCS) - 1
+        for d in docs:
+            assert d["user_id"] != 9
+
+        docs = self.db.find({"age": {"$nin": [1, 5, 22, 31]}})
+        assert len(docs) == len(user_docs.DOCS) - 2
+        for d in docs:
+            assert d["user_id"] not in (1, 9)
+
+        docs = self.db.find({"age": {"$nin": [22, 31]}})
+        assert len(docs) == len(user_docs.DOCS) - 2
+        for d in docs:
+            assert d["user_id"] not in (1, 9)
+
+        # Limits on boolean clauses?
+        docs = self.db.find({"age": {"$nin": range(1000)}})
+        assert len(docs) == 0
+
+    def test_nin_with_array(self):
+        vals = ["Random Garbage", 52, {"Versions": {"Alpha": "Beta"}}]
+        docs = self.db.find({"favorites": {"$nin": vals}})
+        assert len(docs) == len(user_docs.DOCS) - 1
+        for d in docs:
+            assert docs["user_id"] != 1
+
+        vals = ["Lisp", "Python"]
+        docs = self.db.find({"favorites": {"$nin": vals}})
+        assert len(docs) == 0 # Fix
+
+        vals = [{"val1": 1, "val2": "val2"}]
+        docs = self.db.find({"test_in": {"$nin": vals}})
+        assert len(docs) == len(user_docs.DOCS) - 1
+        for d in docs:
+            assert d["user_id"] != 2
+
+    def test_all(self):
+        vals = ["Ruby", "C", "Python", {"Versions": {"Alpha": "Beta"}}]
+        docs = self.db.find({"favorites": {"$all": vals}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 1
+
+        # This matches where favorites either contains
+        # the nested array, or is the nested array. This is
+        # notably different than the non-nested array in that
+        # it does not match a re-ordered version of the array.
+        # The fact that user_id 14 isn't included demonstrates
+        # this behavior.
+        vals = [["Lisp", "Erlang", "Python"]]
+        docs = self.db.find({"favorites": {"$all": vals}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (3, 9)
+
+    def test_exists_field(self):
+        docs = self.db.find({"exists_field": {"$exists": True}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (7, 8)
+        
+        docs = self.db.find({"exists_field": {"$exists": False}})
+        assert len(docs) == len(user_docs.DOCS) - 2
+        for d in docs:
+            assert d["user_id"] not in (7, 8)
+    
+    def test_exists_array(self):
+        docs = self.db.find({"exists_array": {"$exists": True}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (9, 10)
+
+        docs = self.db.find({"exists_array": {"$exists": False}})
+        assert len(docs) == len(user_docs.DOCS) - 2
+        for d in docs:
+            assert d["user_id"] not in (9, 10)
+
+    def test_exists_object(self):
+        docs = self.db.find({"exists_object": {"$exists": True}})
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (11, 12)
+        
+        docs = self.db.find({"exists_object": {"$exists": False}})
+        assert len(docs) == len(user_docs.DOCS) - 2
+        for d in docs:
+            assert d["user_id"] not in (11, 12)
+    
+    def test_exists_object_member(self):
+        docs = self.db.find({"exists_object.should": {"$exists": True}})
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 11
+
+        docs = self.db.find({"exists_object.should": {"$exists": False}})
+        assert len(docs) == len(user_docs.DOCS) - 1
+        for d in docs:
+            assert d["user_id"] != 11
+
+    def test_exists_and(self):
+        q = {"$and": [
+            {"manager": {"$exists": True}}
+            {"exists_object.should": {"$exists": True}}
+        ]}
+        docs = self.db.find(q)
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 11
+    
+        q = {"$and": [
+            {"manager": {"$exists": False}}
+            {"exists_object.should": {"$exists": True}}
+        ]}
+        docs = self.db.find(q)
+        assert len(docs) == 0
+
+        # Translates to manager exists or exists_object.should doesn't
+        # exist, which will match all docs
+        q = {"$not": q}
+        docs = self.db.find(q)
+        assert len(docs) == len(user_docs.DOCS)
+
+
+    # test lucene syntax in $text
+
+
+class ElemMatchTests(mango.FriendDocsTextTests):
+    def test_elem_match(self):
+        q = {
+            "friends": {
+                "$elemMatch": [
+                    {"name.first": "Vargas"}
+                ]
+            }
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (0, 1)
+
+        # A bit subtle here, but this first one is matching
+        # name.first == Ochoa OR name.last == Burch, where the
+        # next example switches it to an AND
+        q = {
+            "friends": {
+                "$elemMatch": [
+                    {"name.first": "Ochoa"},
+                    {"name.last": "Burch"}
+                ]
+            }
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (1, 4)
+
+        q = {
+            "friends": {"$elemMatch": [
+                {
+                    "name.first": "Ochoa",
+                    "name.last": "Burch"
+                }
+            ]}
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 4
+
+        # Check that we can do logic in elemMatch
+        q = {
+            "friends": {"$elemMatch": [
+                {"name.first": "Ochoa", "type": "work"}
+            ]}
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 1
+        assert docs[0]["user_id"] == 4
+        
+        q = {
+            "friends": {
+                "$elemMatch": [{
+                    "name.first": "Ochoa",
+                    "$or": [
+                        {"type": "work"},
+                        {"type": "personal"}
+                    ]
+                }]
+            }
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (1, 4)
+
+        # Same as last, but using $in
+        q = {
+            "friends": {
+                "$elemMatch": [{
+                    "name.first": "Ochoa",
+                    "type": {"$in": ["work", "personal"]}
+                }]
+            }
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 2
+        for d in docs:
+            assert d["user_id"] in (1, 4)
