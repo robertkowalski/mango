@@ -42,16 +42,16 @@ With this pattern:
 import copy
 
 
-def setup(db, index_type="view"):
+def setup(db, index_type="view", **kwargs):
     db.recreate()
     db.save_docs(copy.deepcopy(DOCS))
     if index_type == "view":
-        add_view_indexes(db)
+        add_view_indexes(db, kwargs)
     elif index_type == "text":
-        add_text_indexes(db)
+        add_text_indexes(db, kwargs)
 
 
-def add_view_indexes(db):
+def add_view_indexes(db, kwargs):
     indexes = [
         ["user_id"],
         ["name.last", "name.first"],
@@ -73,111 +73,11 @@ def add_view_indexes(db):
         assert db.create_index(idx) is True
 
 
-def add_text_indexes(db):
-    db.create_text_index()
+def add_text_indexes(db, kwargs):
+    db.create_text_index(**kwargs)
 
 
 DOCS = [
-    {
-        "@graph": [
-            {
-            "http://ibm%2Ecom/ce/ns#system_deployment": {
-                "type": "uri",
-                "value": "urn:ce:/sy/mysys"
-            },
-            "http://ibm%2Ecom/ce/ns#edgeserver": True,
-            "http://ibm%2Ecom/ce/ac/ns#resource-group": {
-                "type": "uri",
-                "value": "urn:ce:/"
-            },
-            "http://ibm%2Ecom/ce/ns#owner": {
-                "type": "uri",
-                "value": "urn:ce:/account/fb#owner"
-            },
-            "http://ibm%2Ecom/ce/ns#emergency_contact": {
-                "type": "uri",
-                "value": "urn:ce:/sy/nally@us.ibm.com"
-            },
-            "http://www%2Ew3%2Eorg/2000/01/rdf-schema#label": "myapp",
-            "http://www%2Ew3%2Eorg/1999/02/22-rdf-syntax-ns#type": {
-                "type": "uri",
-                "value": "http://ibm.com/ce/ns#ApplicationDeployment"
-            },
-            "@id": "urn:ce:/sy/myapp"
-            }
-        ]
-    },
-    {
-        "@graph": [
-            {
-            "@id": "urn:ce:/sy/myapp_v1",
-            "http://ibm%2Ecom/ce/ac/ns#resource-group": {
-                "type": "uri",
-                "value": "urn:ce:/"
-            },
-            "http://ibm%2Ecom/ce/ns#active_in": {
-                "type": "uri",
-                "value": "urn:ce:/sy/mysys"
-            },
-            "http://ibm%2Ecom/ce/ns#application_deployment": {
-                "type": "uri",
-                "value": "urn:ce:/sy/myapp"
-            },
-            "http://ibm%2Ecom/ce/ns#asg": {
-                "type": "uri",
-                "value": "urn:ce:/iaas/2.5"
-            },
-            "http://ibm%2Ecom/ce/ns#emergency_contact": {
-                "type": "uri",
-                "value": "urn:ce:/sy/nally@us.ibm.com"
-            },
-            "http://ibm%2Ecom/ce/ns#image": "xdevops/hello",
-            "http://ibm%2Ecom/ce/ns#loadbalancer_rule": "default",
-            "http://ibm%2Ecom/ce/ns#owner": {
-                "type": "uri",
-                "value": "urn:ce:/account/fb#owner"
-            },
-            "http://ibm%2Ecom/ce/ns#state": "In_production",
-            "http://www%2Ew3%2Eorg/1999/02/22-rdf-syntax-ns#type": {
-                "type": "uri",
-                "value": "http://ibm.com/ce/ns#VersionDeployment"
-            },
-            "http://www%2Ew3%2Eorg/2000/01/rdf-schema#label": "myapp_v1"
-            }
-        ],
-        "@id": "urn:ce:/sy/myapp_v1"
-    },
-    {
-    "@graph": [
-        {
-            "@id": "urn:ce:/mt/pepsi",
-            "ce_improvements": [
-                "http://pepsi.localhost:5101/sy/mysys"
-            ],
-            "http://ibm%2Ecom/ce/ac/ns#resource-group": {
-                "type": "uri",
-                "value": "urn:ce:/mt/pepsi"
-            },
-            "http://ibm%2Ecom/ce/ns#owner": {
-                "type": "uri",
-                "value": "urn:ce:/account/fb#owner"
-            },
-            "http://ibm%2Ecom/ce/ns#site_id": "pepsi",
-            "http://purl%2Eorg/dc/terms/title": "pepsi",
-            "http://www%2Ew3%2Eorg/1999/02/22-rdf-syntax-ns#type": {
-                "type": "uri",
-                "value": "http://ibm.com/ce/ns#Site"
-            }
-        },
-        {
-            "@id": "urn:ce:/",
-            "http://ibm%2Ecom/ce/ns#sites": {
-                "type": "uri",
-                "value": "urn:ce:/mt/pepsi"
-                }
-            }
-        ]
-    },
     {
         "_id": "71562648-6acb-42bc-a182-df6b1f005b09",
         "user_id": 0,
@@ -231,7 +131,6 @@ DOCS = [
             "C",
             {"Versions": {"Alpha": "Beta"}}
         ],
-        "http://example%2Ecom/ex/ns#color\\s" :"blue/whit\\e",
         "test" : [{"a":1, "b":2}]
     },
     {
@@ -280,10 +179,10 @@ DOCS = [
         "email": "madelynsoto@tasmania.com",
         "manager": True,
         "favorites": [[
-            "Ruby",
-            "C",
-            "Python"
-        ],
+                "Lisp",
+                "Erlang",
+                "Python"
+            ],
             "Erlang",
             "C",
             "Erlang"
@@ -526,7 +425,7 @@ DOCS = [
             "Python",
             "Lisp"
         ],
-        "exists_object" : {"should": "object"}
+        "exists_object" : {"another": "object"}
     },
     {
         "_id": "b1e70402-8add-4068-af8f-b4f3d0feb049",
@@ -574,7 +473,8 @@ DOCS = [
         "email": "faithhess@pharmex.com",
         "manager": True,
         "favorites": [
-            "Lisp",
+            "Erlang",
+            "Python",
             "Lisp"
         ]
     },
