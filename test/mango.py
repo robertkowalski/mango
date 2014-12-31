@@ -174,10 +174,18 @@ class UserDocsTests(DbPerClass):
 
 class UserDocsTextTests(DbPerClass):
 
+    DEFAULT_FIELD = None
+    FIELDS = None
+
     @classmethod
     def setUpClass(klass):
         super(UserDocsTextTests, klass).setUpClass()
-        user_docs.setup(klass.db, index_type="text")
+        user_docs.setup(
+                klass.db,
+                index_type="text",
+                default_field=klass.DEFAULT_FIELD,
+                fields=klass.FIELDS
+            )
 
 
 class FriendDocsTextTests(DbPerClass):
