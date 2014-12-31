@@ -22,7 +22,7 @@ convert(Path, {[{<<"$or">>, Args}]}) ->
     Parts = [convert(Path, Arg) || Arg <- Args],
     {op_or, Parts};
 convert(Path, {[{<<"$not">>, Arg}]}) ->
-    {op_not, convert(Path, Arg)};
+    {op_not, {field_exists_query(Path), convert(Path, Arg)}};
 convert(Path, {[{<<"$default">>, Arg}]}) ->
     {op_field, {_, Query}} = convert(Path, Arg),
     {op_default, Query};
@@ -83,7 +83,7 @@ convert(Path, {[{<<"$eq">>, {_} = Arg}]}) ->
 convert(Path, {[{<<"$eq">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), value_str(Arg)}};
 convert(Path, {[{<<"$ne">>, Arg}]}) ->
-    {op_not, convert(Path, {[{<<"$eq">>, Arg}]})};
+    {op_not, {field_exists_query(Path), convert(Path, {[{<<"$eq">>, Arg}]})}};
 convert(Path, {[{<<"$gte">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(gte, Arg)}};
 convert(Path, {[{<<"$gt">>, Arg}]}) ->
@@ -93,7 +93,7 @@ convert(Path, {[{<<"$in">>, Args}]}) ->
     {op_or, convert_in(Path, Args)};
 
 convert(Path, {[{<<"$nin">>, Args}]}) ->
-    {op_not, convert(Path, {[{<<"$in">>, Args}]})};
+    {op_not, {field_exists_query(Path), convert(Path, {[{<<"$in">>, Args}]})}};
 
 convert(Path, {[{<<"$exists">>, ShouldExist}]}) ->
     FieldExists = field_exists_query(Path),
@@ -147,8 +147,8 @@ to_query({op_and, Args}) when is_list(Args) ->
 to_query({op_or, Args}) when is_list(Args) ->
     ["(", join(" OR ", lists:map(fun to_query/1, Args)), ")"];
 
-to_query({op_not, Arg}) when is_tuple(Arg) ->
-    ["NOT (", to_query(Arg), ")"];
+to_query({op_not, {ExistsQuery, Arg}}) when is_tuple(Arg) ->
+    ["(", to_query(ExistsQuery), " AND NOT (", to_query(Arg), "))"];
 
 to_query({op_insert, Arg}) when is_binary(Arg) ->
     ["(", Arg, ")"];
