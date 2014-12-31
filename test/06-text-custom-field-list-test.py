@@ -32,7 +32,14 @@ class CustomFieldsTest(mango.UserDocsTextTests):
         docs = self.db.find({"age": 22, "manager": False})
         assert len(docs) == 0
 
-        docs = self.db.find({"age": })
+        q = {"$or": [
+            {"age": 22},
+            {"favorites.[]": "C++"}
+        ]}
+        docs = self.db.find(q)
+        assert len(docs) == 2 # Might be wrogn
+        for d in docs:
+            assert d["user_id"] in (9, 11)        
 
     def test_missing(self):
         # Raises an exception
