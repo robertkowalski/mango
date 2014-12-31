@@ -339,7 +339,7 @@ class BasicTextTests(mango.UserDocsTextTests):
 
     def test_exists_and(self):
         q = {"$and": [
-            {"manager": {"$exists": True}}
+            {"manager": {"$exists": True}},
             {"exists_object.should": {"$exists": True}}
         ]}
         docs = self.db.find(q)
@@ -347,7 +347,7 @@ class BasicTextTests(mango.UserDocsTextTests):
         assert docs[0]["user_id"] == 11
     
         q = {"$and": [
-            {"manager": {"$exists": False}}
+            {"manager": {"$exists": False}},
             {"exists_object.should": {"$exists": True}}
         ]}
         docs = self.db.find(q)
