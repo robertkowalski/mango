@@ -79,11 +79,7 @@ for_sort_int(Indexes, Sort) ->
                 lists:prefix(Fields, Cols)
         end
     end,
-    SortIndexes = lists:filter(FilterFun, Indexes),
-    if SortIndexes /= [] -> ok; true ->
-        ?MANGO_ERROR({no_usable_index, {sort, Fields}})
-    end,
-    SortIndexes.
+    lists:filter(FilterFun, Indexes).
 
 
 new(Db, Opts) ->
