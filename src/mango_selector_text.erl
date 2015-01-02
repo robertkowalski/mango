@@ -2,7 +2,8 @@
 
 
 -export([
-    convert/1
+    convert/1,
+    convert/2
 ]).
 
 

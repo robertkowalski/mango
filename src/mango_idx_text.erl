@@ -109,7 +109,7 @@ is_usable(Idx, Selector) ->
         all_fields ->
             true;
         Cols ->
-            Fields = mango_idx:fields(Selector),
+            Fields = indexable_fields(Selector),
             sets:is_subset(sets:from_list(Fields), sets:from_list(Cols))
     end.
 
@@ -199,7 +199,7 @@ construct_analyzer({Props}) ->
             [];
         _ ->
             lists:foldl(fun ({Field}, Acc) ->
-            {<<"field">>, FieldName} = lists:keyfind(<<"field">>, 1, Field),
+            {<<"name">>, FieldName} = lists:keyfind(<<"name">>, 1, Field),
             {<<"type">>, FieldType} = lists:keyfind(<<"type">>, 1, Field),
             case lists:keyfind(<<"analyzer">>, 1, Field) of
                 false ->
@@ -212,7 +212,7 @@ construct_analyzer({Props}) ->
         end,
     FinalAnalyzerDef = case DefaultField of
         true ->
-           [{<<"default">>, DefaultFieldAnalyzer} | PerFieldAnalyzerList];
+           [{<<"$default">>, DefaultFieldAnalyzer} | PerFieldAnalyzerList];
         _ ->
             PerFieldAnalyzerList
         end,
@@ -223,3 +223,30 @@ construct_analyzer({Props}) ->
             {[{<<"name">>, <<"perfield">>}, {<<"default">>, DefaultAnalyzer},
                 {<<"fields">>, {FinalAnalyzerDef}}]}
     end.
+
+
+indexable_fields(Selector) ->
+    TupleTree = mango_selector_text:convert([], Selector),
+    indexable_fields([], TupleTree).
+
+
+indexable_fields(Fields, {op_and, Args}) when is_list(Args) ->
+    lists:foldl(fun(Fields0, Arg) -> indexable_fields(Fields0, Arg) end,
+        Fields, Args);
+
+indexable_fields(Fields, {op_or, Args}) when is_list(Args) ->
+    lists:foldl(fun(Fields0, Arg) -> indexable_fields(Fields0, Arg) end,
+        Fields, Args);
+
+indexable_fields(Fields, {op_not, {ExistsQuery, Arg}}) when is_tuple(Arg) ->
+    Fields0 = indexable_fields(Fields, ExistsQuery),
+    indexable_fields(Fields0, Arg);
+
+indexable_fields(Fields, {op_insert, Arg}) when is_binary(Arg) ->
+    Fields;
+
+indexable_fields(Fields, {op_field, {Name, _}}) ->
+    [iolist_to_binary(Name) | Fields];
+
+indexable_fields(Fields, {op_default, _}) ->
+    [<<"default">> | Fields].
