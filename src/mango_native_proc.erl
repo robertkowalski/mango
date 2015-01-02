@@ -135,7 +135,7 @@ get_text_entries({IdxProps}, Doc) ->
 
 
 get_text_entries0(IdxProps, Doc) ->
-    {DefaultEnabled, _} = get_default_text_field(IdxProps),
+    {DefaultEnabled, _} = mango_idx_text:get_default_field_options(IdxProps),
     FieldsList = get_text_field_list(IdxProps),
     TAcc = #tacc{fields = FieldsList},
     Fields0 = get_text_field_values(Doc, TAcc),
@@ -231,13 +231,6 @@ should_index(Selector, Doc) ->
         _ -> false
     end,
     Matches and not IsDesign.
-
-
-get_default_text_field(IdxProps) ->
-    {Props} = couch_util:get_value(<<"default_field">>, IdxProps, {[]}),
-    Enabled = couch_util:get_value(<<"enabled">>, Props, true),
-    Analyzer = couch_util:get_value(<<"analyzer">>, Props, <<"standard">>),
-    {Enabled, Analyzer}.
 
 
 get_text_field_list(IdxProps) ->
