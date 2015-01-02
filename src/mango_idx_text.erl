@@ -9,7 +9,8 @@
     to_json/1,
     columns/1,
     is_usable/2,
-    priority/3
+    priority/3,
+    get_default_field_options/1
 ]).
 
 
@@ -174,14 +175,23 @@ make_text(Idx) ->
 
 
 get_default_field_options(Props) ->
-    {default_field, {Default}} = lists:keyfind(default_field, 1, Props),
-    Enabled = couch_util:get_value(<<"enabled">>, Default, true),
-    Analyzer = couch_util:get_value(<<"analyzer">>, Default,"standard"),
-    {Enabled,Analyzer}.
+    Default = couch_util:get_value(<<"default_field">>, Props, {[]}),
+    case Default of
+        Bool when is_boolean(Bool) ->
+            {Bool, <<"standard">>};
+        {[]} ->
+            {true, <<"standard">>};
+        {Opts}->
+            Enabled = couch_util:get_value(<<"enabled">>, Opts, true),
+            Analyzer = couch_util:get_value(<<"analyzer">>, Opts,
+                <<"standard">>),
+            {Enabled, Analyzer}
+    end.
 
 
 construct_analyzer({Props}) ->
-    DefaultAnalyzer = couch_util:get_value(default_analyzer, Props, "keyword"),
+    DefaultAnalyzer = couch_util:get_value(default_analyzer, Props,
+        <<"keyword">>),
     {DefaultField, DefaultFieldAnalyzer} = get_default_field_options(Props),
     Fields = couch_util:get_value(fields, Props, all_fields),
     PerFieldAnalyzerList = case Fields of
@@ -208,7 +218,7 @@ construct_analyzer({Props}) ->
         end,
     case FinalAnalyzerDef of
         [] ->
-            "keyword";
+            <<"keyword">>;
         _ ->
             {[{<<"name">>, <<"perfield">>}, {<<"default">>, DefaultAnalyzer},
                 {<<"fields">>, {FinalAnalyzerDef}}]}
