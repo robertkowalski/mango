@@ -231,11 +231,11 @@ indexable_fields(Selector) ->
 
 
 indexable_fields(Fields, {op_and, Args}) when is_list(Args) ->
-    lists:foldl(fun(Fields0, Arg) -> indexable_fields(Fields0, Arg) end,
+    lists:foldl(fun(Arg, Fields0) -> indexable_fields(Fields0, Arg) end,
         Fields, Args);
 
 indexable_fields(Fields, {op_or, Args}) when is_list(Args) ->
-    lists:foldl(fun(Fields0, Arg) -> indexable_fields(Fields0, Arg) end,
+    lists:foldl(fun(Arg, Fields0) -> indexable_fields(Fields0, Arg) end,
         Fields, Args);
 
 indexable_fields(Fields, {op_not, {ExistsQuery, Arg}}) when is_tuple(Arg) ->
