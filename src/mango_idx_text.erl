@@ -175,7 +175,7 @@ make_text(Idx) ->
 
 
 get_default_field_options(Props) ->
-    Default = couch_util:get_value(<<"default_field">>, Props, {[]}),
+    Default = couch_util:get_value(default_field, Props, {[]}),
     case Default of
         Bool when is_boolean(Bool) ->
             {Bool, <<"standard">>};
