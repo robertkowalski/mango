@@ -135,7 +135,7 @@ get_text_entries({IdxProps}, Doc) ->
 
 
 get_text_entries0(IdxProps, Doc) ->
-    {DefaultEnabled, _} = mango_idx_text:get_default_field_options(IdxProps),
+    DefaultEnabled = get_default_enabled(IdxProps),
     FieldsList = get_text_field_list(IdxProps),
     TAcc = #tacc{fields = FieldsList},
     Fields0 = get_text_field_values(Doc, TAcc),
@@ -188,6 +188,17 @@ get_text_field_values_arr([], _, FAcc) ->
 get_text_field_values_arr([Value | Rest], TAcc, FAcc) ->
     Fields = get_text_field_values(Value, TAcc),
     get_text_field_values_arr(Rest, TAcc, Fields ++ FAcc).
+
+
+get_default_enabled(Props) ->
+    case couch_util:get_value(<<"default_field">>, Props, {[]}) of
+        Bool when is_boolean(Bool) ->
+            Bool;
+        {[]} ->
+            true;
+        {Opts}->
+            couch_util:get_value(<<"enabled">>, Opts, true)
+    end.
 
 
 add_default_text_field(Fields) ->
