@@ -36,13 +36,14 @@ class BasicTextTests(mango.UserDocsTextTests):
         assert docs[0]["user_id"] == 9
 
         docs = self.db.find({"age": {"$lt": 33}})
-        assert len(docs) == 1
-        assert docs[0]["user_id"] == 9
-
-        docs = self.db.find({"age": {"$lt": 34}})
         assert len(docs) == 2
         for d in docs:
             assert d["user_id"] in (1, 9)
+
+        docs = self.db.find({"age": {"$lt": 34}})
+        assert len(docs) == 3
+        for d in docs:
+            assert d["user_id"] in (1, 7, 9)
  
     def test_lte(self):
         docs = self.db.find({"age": {"$lte": 21}})
@@ -53,9 +54,9 @@ class BasicTextTests(mango.UserDocsTextTests):
         assert docs[0]["user_id"] == 9
 
         docs = self.db.find({"age": {"$lte": 33}})
-        assert len(docs) == 2
+        assert len(docs) == 3
         for d in docs:
-            assert d["user_id"] in (1, 9)
+            assert d["user_id"] in (1, 7, 9)
     
     def test_eq(self):
         docs = self.db.find({"age": 21})
@@ -119,11 +120,11 @@ class BasicTextTests(mango.UserDocsTextTests):
         assert len(docs) == 0
 
     def test_and(self):
-        docs = self.db.find({"age": "22", "manager": True})
+        docs = self.db.find({"age": 22, "manager": True})
         assert len(docs) == 1
-        assert docs[0] == 9
+        assert docs[0]["user_id"] == 9
         
-        docs = self.db.find({"age": "22", "manager": False})
+        docs = self.db.find({"age": 22, "manager": False})
         assert len(docs) == 0
 
         docs = self.db.find({"$and": [{"age": 22}, {"manager": True}]})
@@ -149,13 +150,13 @@ class BasicTextTests(mango.UserDocsTextTests):
         docs = self.db.find({"$or": [{"age": 22}, {"age": 33}]})
         assert len(docs) == 2
         for d in docs:
-            assert d["user_id"] in (1, 9)
+            assert d["user_id"] in (7, 9)
 
         q = {"$or": [{"$text": "Ramona"}, {"$text": "Stephanie"}]}
         docs = self.db.find(q)
         assert len(docs) == 2
         for d in docs:
-            assert d["uesr_id"] in (1, 9)
+            assert d["user_id"] in (0, 9)
         
         q = {"$or": [{"$text": "Ramona"}, {"age": 22}]}
         docs = self.db.find(q)
