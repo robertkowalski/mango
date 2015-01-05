@@ -254,7 +254,7 @@ get_text_field_list(IdxProps) ->
 
 
 get_text_field_info({Props}) ->
-    Name = couch_util:get_value(<<"field">>, Props),
+    Name = couch_util:get_value(<<"name">>, Props),
     Type0 = couch_util:get_value(<<"type">>, Props),
     if not is_binary(Name) -> []; true ->
         Type = get_text_field_type(Type0),
