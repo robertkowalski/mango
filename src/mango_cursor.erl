@@ -52,6 +52,8 @@ execute(#cursor{index=Idx}=Cursor, UserFun, UserAcc) ->
 
 maybe_filter_indexes(Indexes, Opts) ->
     case lists:keyfind(use_index, 1, Opts) of
+        {use_index, []} ->
+            Indexes;
         {index_name, []} ->
             Indexes;
         {index_name, [DesignId]} ->
