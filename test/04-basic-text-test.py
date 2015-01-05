@@ -71,11 +71,8 @@ class BasicTextTests(mango.UserDocsTextTests):
         assert docs[0]["user_id"] == 9
 
         docs = self.db.find({"age": 33})
-        assert len(docs) == 0
-
-        docs = self.db.find({"age": 34})
         assert len(docs) == 1
-        assert docs[0]["user_id"] == 1
+        assert docs[0]["user_id"] == 7
 
     def test_ne(self):
         docs = self.db.find({"age": {"$ne": 22}})
@@ -226,16 +223,16 @@ class BasicTextTests(mango.UserDocsTextTests):
         vals = ["Random Garbage", 52, {"Versions": {"Alpha": "Beta"}}]
         docs = self.db.find({"favorites": {"$in": vals}})
         assert len(docs) == 1
-        assert docs["user_id"] == 1
+        assert docs[0]["user_id"] == 1
     
         vals = ["Lisp", "Python"]
         docs = self.db.find({"favorites": {"$in": vals}})
-        assert len(docs) == 2 # There's more
+        assert len(docs) == 11
 
         vals = [{"val1": 1, "val2": "val2"}]
         docs = self.db.find({"test_in": {"$in": vals}})
         assert len(docs) == 1
-        assert docs["user_id"] == 2
+        assert docs[0]["user_id"] == 2
 
     def test_nin_with_value(self):
         docs = self.db.find({"age": {"$nin": [1, 5]}})
@@ -265,17 +262,15 @@ class BasicTextTests(mango.UserDocsTextTests):
         docs = self.db.find({"favorites": {"$nin": vals}})
         assert len(docs) == len(user_docs.DOCS) - 1
         for d in docs:
-            assert docs["user_id"] != 1
+            assert d["user_id"] != 1
 
         vals = ["Lisp", "Python"]
         docs = self.db.find({"favorites": {"$nin": vals}})
-        assert len(docs) == 0 # Fix
+        assert len(docs) == 4
 
         vals = [{"val1": 1, "val2": "val2"}]
         docs = self.db.find({"test_in": {"$nin": vals}})
-        assert len(docs) == len(user_docs.DOCS) - 1
-        for d in docs:
-            assert d["user_id"] != 2
+        assert len(docs) == 0
 
     def test_all(self):
         vals = ["Ruby", "C", "Python", {"Versions": {"Alpha": "Beta"}}]
