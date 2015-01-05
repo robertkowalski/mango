@@ -161,8 +161,7 @@ to_query({op_insert, Arg}) when is_binary(Arg) ->
 %% We escape : and / for now for values and all lucene chars for fieldnames
 %% This needs to be resolved.
 to_query({op_field, {Name, Value}}) ->
-    ["(", escape_chars(Name, lucene_chars()), ":", 
-        escape_chars(Value, [<<"/">>, <<":">>]), ")"];
+    ["(", escape_chars(Name, lucene_chars()), ":", Value, ")"];
 
 to_query({op_fieldname, {Name, Wildcard}}) ->
     ["($fieldnames:", escape_chars(Name, lucene_chars()), Wildcard, ")"];
@@ -253,7 +252,7 @@ type_str(Value) when is_binary(Value) ->
 
 
 value_str(Value) when is_binary(Value) ->
-    Value;
+    escape_chars(Value, value_chars());
 value_str(Value) when is_integer(Value) ->
     list_to_binary(integer_to_list(Value));
 value_str(Value) when is_float(Value) ->
@@ -274,6 +273,10 @@ escape_chars(Field, Chars) when is_binary(Field) ->
     iolist_to_binary(Escaped);
 escape_chars(Fields, Chars) when is_list(Fields) ->
     [escape_chars(Field, Chars) || Field <- Fields].
+
+
+value_chars() ->
+    [<<"/">>, <<":">>, <<" ">>, <<"\t">>, <<"\r">>, <<"\n">>].
 
 
 lucene_chars()->
