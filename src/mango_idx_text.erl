@@ -110,6 +110,7 @@ is_usable(Idx, Selector) ->
             true;
         Cols ->
             Fields = indexable_fields(Selector),
+            twig:log(notice, "Fields ~p, Columns ~p", [Fields, Cols]),
             sets:is_subset(sets:from_list(Fields), sets:from_list(Cols))
     end.
 
@@ -249,4 +250,4 @@ indexable_fields(Fields, {op_field, {Name, _}}) ->
     [iolist_to_binary(Name) | Fields];
 
 indexable_fields(Fields, {op_default, _}) ->
-    [<<"default">> | Fields].
+    [<<"$default">> | Fields].
