@@ -54,11 +54,9 @@ maybe_filter_indexes(Indexes, Opts) ->
     case lists:keyfind(use_index, 1, Opts) of
         {use_index, []} ->
             Indexes;
-        {index_name, []} ->
-            Indexes;
-        {index_name, [DesignId]} ->
+        {use_index, [DesignId]} ->
             filter_indexes(Indexes, DesignId);
-        {index_name, [DesignId, ViewName]} ->
+        {use_index, [DesignId, ViewName]} ->
             filter_indexes(Indexes, DesignId, ViewName)
     end.
 
