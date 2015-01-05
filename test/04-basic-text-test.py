@@ -220,7 +220,7 @@ class BasicTextTests(mango.UserDocsTextTests):
         assert len(docs) == 15
 
     def test_in_with_array(self):
-        vals = ["Random Garbage", 52, {"Versions": {"Alpha": "Beta"}}]
+        vals = ["\"Random Garbage\"", 52, {"Versions": {"Alpha": "Beta"}}]
         docs = self.db.find({"favorites": {"$in": vals}})
         assert len(docs) == 1
         assert docs[0]["user_id"] == 1
@@ -361,11 +361,9 @@ class BasicTextTests(mango.UserDocsTextTests):
 
 class ElemMatchTests(mango.FriendDocsTextTests):
     def test_elem_match(self):
-        q = {
-            "friends": {
-                "$elemMatch": [
+        q = {"friends": {
+                "$elemMatch":
                     {"name.first": "Vargas"}
-                ]
             }
         }
         docs = self.db.find(q)
@@ -373,53 +371,38 @@ class ElemMatchTests(mango.FriendDocsTextTests):
         for d in docs:
             assert d["user_id"] in (0, 1)
 
-        # A bit subtle here, but this first one is matching
-        # name.first == Ochoa OR name.last == Burch, where the
-        # next example switches it to an AND
         q = {
             "friends": {
-                "$elemMatch": [
-                    {"name.first": "Ochoa"},
-                    {"name.last": "Burch"}
-                ]
-            }
-        }
-        docs = self.db.find(q)
-        assert len(docs) == 2
-        for d in docs:
-            assert d["user_id"] in (1, 4)
-
-        q = {
-            "friends": {"$elemMatch": [
-                {
+                "$elemMatch": {
                     "name.first": "Ochoa",
                     "name.last": "Burch"
                 }
-            ]}
+            }
         }
         docs = self.db.find(q)
         assert len(docs) == 1
         assert docs[0]["user_id"] == 4
 
+
         # Check that we can do logic in elemMatch
         q = {
-            "friends": {"$elemMatch": [
-                {"name.first": "Ochoa", "type": "work"}
-            ]}
+            "friends": {"$elemMatch": {
+                "name.first": "Ochoa", "type": "work"
+            }}
         }
         docs = self.db.find(q)
         assert len(docs) == 1
-        assert docs[0]["user_id"] == 4
+        assert docs[0]["user_id"] == 1
         
         q = {
             "friends": {
-                "$elemMatch": [{
+                "$elemMatch": {
                     "name.first": "Ochoa",
                     "$or": [
                         {"type": "work"},
                         {"type": "personal"}
                     ]
-                }]
+                }
             }
         }
         docs = self.db.find(q)
@@ -430,10 +413,10 @@ class ElemMatchTests(mango.FriendDocsTextTests):
         # Same as last, but using $in
         q = {
             "friends": {
-                "$elemMatch": [{
+                "$elemMatch": {
                     "name.first": "Ochoa",
                     "type": {"$in": ["work", "personal"]}
-                }]
+                }
             }
         }
         docs = self.db.find(q)
