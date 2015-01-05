@@ -100,7 +100,7 @@ convert(Path, {[{<<"$exists">>, ShouldExist}]}) ->
     FieldExists = field_exists_query(Path),
     case ShouldExist of
         true -> FieldExists;
-        false -> {op_not, FieldExists}
+        false -> {op_not, {FieldExists, false}}
     end;
 
 % We're not checking the actual type here, just looking for
@@ -150,6 +150,10 @@ to_query({op_or, Args}) when is_list(Args) ->
 
 to_query({op_not, {ExistsQuery, Arg}}) when is_tuple(Arg) ->
     ["(", to_query(ExistsQuery), " AND NOT (", to_query(Arg), "))"];
+
+%% For $exists:false
+to_query({op_not, {ExistsQuery, false}}) ->
+    ["($fieldnames:/.*/ ", " AND NOT (", to_query(ExistsQuery), "))"];
 
 to_query({op_insert, Arg}) when is_binary(Arg) ->
     ["(", Arg, ")"];
