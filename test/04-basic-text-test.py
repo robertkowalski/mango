@@ -220,7 +220,7 @@ class BasicTextTests(mango.UserDocsTextTests):
         assert len(docs) == 15
 
     def test_in_with_array(self):
-        vals = ["\"Random Garbage\"", 52, {"Versions": {"Alpha": "Beta"}}]
+        vals = ["Random Garbage", 52, {"Versions": {"Alpha": "Beta"}}]
         docs = self.db.find({"favorites": {"$in": vals}})
         assert len(docs) == 1
         assert docs[0]["user_id"] == 1
@@ -423,3 +423,48 @@ class ElemMatchTests(mango.FriendDocsTextTests):
         assert len(docs) == 2
         for d in docs:
             assert d["user_id"] in (1, 4)
+
+        q = {
+            "$and": [{
+                "friends": {
+                    "$elemMatch": {
+                        "id": 0,
+                        "name": {
+                            "$exists": True
+                            }
+                        }
+                    }
+                },
+                {
+                "friends": {
+                    "$elemMatch": {
+                        "$or": [
+                            {
+                            "name": {
+                                "first": "Campos",
+                                "last": "Freeman"
+                                }
+                            },
+                            {
+                            "name": {
+                                "$in": [{
+                                    "first": "Gibbs",
+                                    "last": "Mccarty"
+                                    },
+                                    {
+                                    "first": "Wilkins",
+                                    "last": "Chang"
+                                     }
+                                    ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+        docs = self.db.find(q)
+        assert len(docs) == 3
+        for d in docs:
+            assert d["user_id"] in (10, 11,12)
