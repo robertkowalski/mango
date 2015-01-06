@@ -69,8 +69,12 @@ convert(Path, {[{<<"$elemMatch">>, Arg}]}) ->
     convert([<<"[]">> | Path], Arg);
 
 % Our comparison operators are fairly straight forward
+convert(Path, {[{<<"$lt">>, Arg}]}) when is_list(Arg); is_tuple(Arg)->
+    field_exists_query(Path);
 convert(Path, {[{<<"$lt">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(lt, Arg)}};
+convert(Path, {[{<<"$lte">>, Arg}]}) when is_list(Arg); is_tuple(Arg)->
+    field_exists_query(Path);
 convert(Path, {[{<<"$lte">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(lte, Arg)}};
 convert(Path, {[{<<"$eq">>, Args}]}) when is_list(Args) ->
@@ -85,8 +89,12 @@ convert(Path, {[{<<"$eq">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), value_str(Arg)}};
 convert(Path, {[{<<"$ne">>, Arg}]}) ->
     {op_not, {field_exists_query(Path), convert(Path, {[{<<"$eq">>, Arg}]})}};
+convert(Path, {[{<<"$gte">>, Arg}]}) when is_list(Arg); is_tuple(Arg)->
+    field_exists_query(Path);
 convert(Path, {[{<<"$gte">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(gte, Arg)}};
+convert(Path, {[{<<"$gt">>, Arg}]}) when is_list(Arg); is_tuple(Arg)->
+    field_exists_query(Path);
 convert(Path, {[{<<"$gt">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(gt, Arg)}};
 

@@ -249,5 +249,12 @@ indexable_fields(Fields, {op_insert, Arg}) when is_binary(Arg) ->
 indexable_fields(Fields, {op_field, {Name, _}}) ->
     [iolist_to_binary(Name) | Fields];
 
+%% In this particular case, the lucene index is doing a field_exists query
+%% so it is looking at all sorts of combinations of field:* and field.*
+%% We don't add the field because we cannot pre-determine what field will exist.
+%% Hence we just return Fields and make it less restrictive.
+indexable_fields(Fields, {op_fieldname, {_, _}}) ->
+    Fields;
+
 indexable_fields(Fields, {op_default, _}) ->
     [<<"$default">> | Fields].
