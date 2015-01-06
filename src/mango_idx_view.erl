@@ -9,7 +9,6 @@
     to_json/1,
     columns/1,
     is_usable/2,
-    priority/3,
     start_key/1,
     end_key/1,
     indexable_fields/1,
@@ -100,20 +99,6 @@ is_usable(Idx, Selector) ->
     Columns = columns(Idx),
     Fields = indexable_fields(Selector),
     lists:member(hd(Columns), Fields).
-
-
-priority(Idx, Selector, _Opts) ->
-    IndexFields = indexable_fields(Selector),
-    FieldRanges = field_ranges(Selector, IndexFields),
-    case FieldRanges of
-        [{_Field, empty}] ->
-            % Make this one super priority because
-            % we know its an empty result set
-            {infinity, infinity};
-        _ ->
-            Cols = columns(Idx),
-            {1, column_prefix_length(Cols, FieldRanges)}
-    end.
 
 
 start_key([]) ->
@@ -450,15 +435,4 @@ range_pos(Low, Arg, High) ->
                 _ ->
                     max
             end
-    end.
-
-
-column_prefix_length([], _) ->
-    0;
-column_prefix_length([Col | Rest], Ranges) ->
-    case lists:keyfind(Col, 1, Ranges) of
-        {Col, _} ->
-            1 + column_prefix_length(Rest, Ranges);
-        false ->
-            0
     end.

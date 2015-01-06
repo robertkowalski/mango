@@ -12,7 +12,14 @@
 -include("mango.hrl").
 
 
-create(Db, Index, Selector, Opts) ->
+create(Db, Indexes, Selector, Opts) ->
+    Index = case Indexes of
+        [Index0] ->
+            Index0;
+        _ ->
+            ?MANGO_ERROR(multiple_text_indexes)
+    end,
+
     % Limit the result set size to 50 for Clouseau's
     % sake. We may want to revisit this.
     Limit0 = couch_util:get_value(limit, Opts, 50),

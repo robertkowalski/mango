@@ -24,7 +24,6 @@
     opts/1,
     columns/1,
     is_usable/2,
-    priority/3,
     start_key/2,
     end_key/2,
     cursor_mod/1,
@@ -187,20 +186,6 @@ columns(#idx{}=Idx) ->
 is_usable(#idx{}=Idx, Selector) ->
     Mod = idx_mod(Idx),
     Mod:is_usable(Idx, Selector).
-
-
-priority(#idx{}=Idx, Selector, Opts) ->
-    % This is a bit subtle, but the callback for this
-    % function should return {TypePriority, IdxPriority}
-    % where a higher priority means the index is more
-    % likely to be used for the query.
-    %
-    % For now we prever view based indexes because the
-    % default is to use r=1 reads from the local shard
-    % database. In the future we'll want to re-visit
-    % this reasoning.
-    Mod = idx_mod(Idx),
-    Mod:priority(Idx, Selector, Opts).
 
 
 start_key(#idx{}=Idx, Ranges) ->

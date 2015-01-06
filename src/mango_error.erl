@@ -31,6 +31,12 @@ info(mango_cursor, {no_usable_index, selector_unsupported}) ->
         <<"There is no index available for this selector.">>
     };
 
+info(mango_cursor_text, multiple_text_indexes) ->
+    {
+        400,
+        <<"multiple_text_indexes">>,
+        <<"You must specify an index with the `use_index` parameter.">>
+    };
 info(mango_cursor_text, {no_usable_index, {fields, Possible}}) ->
     S0 = [binary_to_list(P) || P <- Possible],
     S1 = string:join(S0, ", "),

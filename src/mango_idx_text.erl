@@ -9,7 +9,6 @@
     to_json/1,
     columns/1,
     is_usable/2,
-    priority/3,
     get_default_field_options/1
 ]).
 
@@ -113,10 +112,6 @@ is_usable(Idx, Selector) ->
             twig:log(notice, "Fields ~p, Columns ~p", [Fields, Cols]),
             sets:is_subset(sets:from_list(Fields), sets:from_list(Cols))
     end.
-
-
-priority(_Idx, _Selector, _Opts) ->
-    {0, 1}.
 
 
 do_validate({Props}) ->
