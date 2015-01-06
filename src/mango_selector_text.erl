@@ -79,6 +79,9 @@ convert(Path, {[{<<"$lte">>, Arg}]}) when is_list(Arg); is_tuple(Arg);
     field_exists_query(Path);
 convert(Path, {[{<<"$lte">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(lte, Arg)}};
+%% This is for indexable_fields
+convert(Path, {[{<<"$eq">>, Arg}]}) when Arg =:= null ->
+    {op_null, {make_field(Path, Arg), value_str(Arg)}};
 convert(Path, {[{<<"$eq">>, Args}]}) when is_list(Args) ->
     Path0 = [<<"[]">> | Path],
     LPart = {op_field, {make_field(Path0, length), value_str(length(Args))}},
@@ -173,6 +176,10 @@ to_query({op_insert, Arg}) when is_binary(Arg) ->
 %% We escape : and / for now for values and all lucene chars for fieldnames
 %% This needs to be resolved.
 to_query({op_field, {Name, Value}}) ->
+    ["(", escape_chars(Name, lucene_chars()), ":", Value, ")"];
+
+%% This is for indexable_fields
+to_query({op_null, {Name, Value}}) ->
     ["(", escape_chars(Name, lucene_chars()), ":", Value, ")"];
 
 to_query({op_fieldname, {Name, Wildcard}}) ->
