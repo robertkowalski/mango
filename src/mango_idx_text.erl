@@ -256,5 +256,9 @@ indexable_fields(Fields, {op_field, {Name, _}}) ->
 indexable_fields(Fields, {op_fieldname, {_, _}}) ->
     Fields;
 
+%% Similar idea to op_fieldname but with fieldname:null
+indexable_fields(Fields, {op_null, {_, _}}) ->
+    Fields;
+
 indexable_fields(Fields, {op_default, _}) ->
     [<<"$default">> | Fields].
