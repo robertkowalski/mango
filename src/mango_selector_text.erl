@@ -186,7 +186,7 @@ to_query({op_fieldname, {Name, Wildcard}}) ->
     ["($fieldnames:", escape_chars(Name, lucene_chars()), Wildcard, ")"];
 
 to_query({op_default, Value}) ->
-    ["($default:", escape_chars(Value, lucene_chars()), ")"].
+    ["($default:", Value, ")"].
 
 
 join(_Sep, [Item]) ->
