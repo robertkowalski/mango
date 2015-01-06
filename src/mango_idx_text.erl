@@ -194,35 +194,18 @@ construct_analyzer({Props}) ->
     DefaultAnalyzer = couch_util:get_value(default_analyzer, Props,
         <<"keyword">>),
     {DefaultField, DefaultFieldAnalyzer} = get_default_field_options(Props),
-    Fields = couch_util:get_value(fields, Props, all_fields),
-    PerFieldAnalyzerList = case Fields of
-        all_fields ->
-            [];
-        _ ->
-            lists:foldl(fun ({Field}, Acc) ->
-            {<<"name">>, FieldName} = lists:keyfind(<<"name">>, 1, Field),
-            {<<"type">>, FieldType} = lists:keyfind(<<"type">>, 1, Field),
-            case lists:keyfind(<<"analyzer">>, 1, Field) of
-                false ->
-                    Acc;
-                {<<"analyzer">>, PerFieldAnalyzer} ->
-                    [{<<FieldName/binary, ":", FieldType/binary>>,
-                        PerFieldAnalyzer} | Acc]
-            end
-            end, [], Fields)
-        end,
-    FinalAnalyzerDef = case DefaultField of
+    DefaultAnalyzerDef = case DefaultField of
         true ->
-           [{<<"$default">>, DefaultFieldAnalyzer} | PerFieldAnalyzerList];
+            [{<<"$default">>, DefaultFieldAnalyzer}];
         _ ->
-            PerFieldAnalyzerList
+            []
         end,
-    case FinalAnalyzerDef of
+    case DefaultAnalyzerDef of
         [] ->
             <<"keyword">>;
         _ ->
             {[{<<"name">>, <<"perfield">>}, {<<"default">>, DefaultAnalyzer},
-                {<<"fields">>, {FinalAnalyzerDef}}]}
+                {<<"fields">>, {DefaultAnalyzerDef}}]}
     end.
 
 
