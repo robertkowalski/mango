@@ -168,10 +168,8 @@ get_text_field_values(Num, TAcc) when is_number(Num) ->
 get_text_field_values(Bool, TAcc) when is_boolean(Bool) ->
     make_text_field(TAcc, <<"boolean">>, Bool);
 
-get_text_field_values(null, _) ->
-    % Should we and how would we index
-    % null fields?
-    [].
+get_text_field_values(null, TAcc) ->
+    make_text_field(TAcc, <<"null">>, true).
 
 
 get_text_field_values_obj([], _, FAcc) ->

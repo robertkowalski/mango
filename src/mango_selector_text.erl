@@ -69,11 +69,13 @@ convert(Path, {[{<<"$elemMatch">>, Arg}]}) ->
     convert([<<"[]">> | Path], Arg);
 
 % Our comparison operators are fairly straight forward
-convert(Path, {[{<<"$lt">>, Arg}]}) when is_list(Arg); is_tuple(Arg)->
+convert(Path, {[{<<"$lt">>, Arg}]}) when is_list(Arg); is_tuple(Arg);
+        Arg =:= null ->
     field_exists_query(Path);
 convert(Path, {[{<<"$lt">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(lt, Arg)}};
-convert(Path, {[{<<"$lte">>, Arg}]}) when is_list(Arg); is_tuple(Arg)->
+convert(Path, {[{<<"$lte">>, Arg}]}) when is_list(Arg); is_tuple(Arg);
+        Arg =:= null->
     field_exists_query(Path);
 convert(Path, {[{<<"$lte">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(lte, Arg)}};
@@ -89,11 +91,13 @@ convert(Path, {[{<<"$eq">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), value_str(Arg)}};
 convert(Path, {[{<<"$ne">>, Arg}]}) ->
     {op_not, {field_exists_query(Path), convert(Path, {[{<<"$eq">>, Arg}]})}};
-convert(Path, {[{<<"$gte">>, Arg}]}) when is_list(Arg); is_tuple(Arg)->
+convert(Path, {[{<<"$gte">>, Arg}]}) when is_list(Arg); is_tuple(Arg);
+        Arg =:= null ->
     field_exists_query(Path);
 convert(Path, {[{<<"$gte">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(gte, Arg)}};
-convert(Path, {[{<<"$gt">>, Arg}]}) when is_list(Arg); is_tuple(Arg)->
+convert(Path, {[{<<"$gt">>, Arg}]}) when is_list(Arg); is_tuple(Arg);
+        Arg =:= null->
     field_exists_query(Path);
 convert(Path, {[{<<"$gt">>, Arg}]}) ->
     {op_field, {make_field(Path, Arg), range(gt, Arg)}};
@@ -256,7 +260,9 @@ type_str(Value) when is_number(Value) ->
 type_str(Value) when is_boolean(Value) ->
     <<"boolean">>;
 type_str(Value) when is_binary(Value) ->
-    <<"string">>.
+    <<"string">>;
+type_str(null) ->
+    <<"null">>.
 
 
 value_str(Value) when is_binary(Value) ->
@@ -268,7 +274,9 @@ value_str(Value) when is_float(Value) ->
 value_str(true) ->
     <<"true">>;
 value_str(false) ->
-    <<"false">>.
+    <<"false">>;
+value_str(null) ->
+    <<"true">>.
 
 
 %% + - && || ! ( ) { } [ ] ^ " ~ * ? : \ /
