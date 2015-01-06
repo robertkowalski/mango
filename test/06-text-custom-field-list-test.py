@@ -15,7 +15,6 @@ class CustomFieldsTest(mango.UserDocsTextTests):
         {
             "name": "location.address.street",
             "type": "string",
-            "analyzer": "standard"
         }
     ]
 
@@ -42,7 +41,6 @@ class CustomFieldsTest(mango.UserDocsTextTests):
             assert d["user_id"] in (9, 11)        
 
     def test_missing(self):
-        # Raises an exception
         self.db.find({"location.state": "Nevada"})
 
     def test_missing_type(self):
@@ -50,19 +48,9 @@ class CustomFieldsTest(mango.UserDocsTextTests):
         self.db.find({"age": "foo"})
 
     def test_field_analyzer_is_keyword(self):
-        docs = self.db.find({"location.state", "New"})
+        docs = self.db.find({"location.state": "New"})
         assert len(docs) == 0
 
-        docs = self.db.find({"location.state", "New Hampshire"})
+        docs = self.db.find({"location.state": "New Hampshire"})
         assert len(docs) == 1
         assert docs[0]["user_id"] == 10
-
-    def test_per_field_analyzer(self):
-        docs = self.db.find({"location.address.street": "Bancroft"})
-        assert len(docs) == 1
-        assert docs[0]["user_id"] == 11
-    
-        docs = self.db.find({"location.address.street": "place"})
-        assert len(docs) == 4
-        for d in docs:
-            assert d["user_id"] in (9, 11, 12, 13)
