@@ -48,7 +48,7 @@ class DefaultFieldWithCustomAnalyzer(mango.UserDocsTextTests):
         assert docs[0]["user_id"] == 9
     
     def test_not_analyzed(self):
-        docs = self.db.find({"$text": "\"Lott Place\""})
+        docs = self.db.find({"$text": "Lott Place"})
         assert len(docs) == 1
         assert docs[0]["user_id"] == 9
         

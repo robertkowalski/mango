@@ -311,12 +311,7 @@ DOCS = [
         "company": "Globoil",
         "email": "jamesmcdaniel@globoil.com",
         "manager": True,
-        "favorites": [
-            "Lisp",
-            "C",
-            "Ruby",
-            "C"
-        ],
+        "favorites": None,
         "exists_field" : "should_exist2"
     },
     {
@@ -441,7 +436,7 @@ DOCS = [
                 "number": 8766
             }
         },
-        "company": "Fangold",
+        "company": None,
         "email": "whitleyharvey@fangold.com",
         "manager": False,
         "twitter": "@whitleyharvey",
