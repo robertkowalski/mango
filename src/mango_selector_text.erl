@@ -176,14 +176,15 @@ to_query({op_insert, Arg}) when is_binary(Arg) ->
 %% We escape : and / for now for values and all lucene chars for fieldnames
 %% This needs to be resolved.
 to_query({op_field, {Name, Value}}) ->
-    ["(", escape_chars(Name, lucene_chars()), ":", Value, ")"];
+    ["(", mango_util:url_encode_utf8(iolist_to_binary(Name)), ":", Value, ")"];
 
 %% This is for indexable_fields
 to_query({op_null, {Name, Value}}) ->
-    ["(", escape_chars(Name, lucene_chars()), ":", Value, ")"];
+    ["(", mango_util:url_encode_utf8(iolist_to_binary(Name)), ":", Value, ")"];
 
 to_query({op_fieldname, {Name, Wildcard}}) ->
-    ["($fieldnames:", escape_chars(Name, lucene_chars()), Wildcard, ")"];
+    ["($fieldnames:", mango_util:url_encode_utf8(iolist_to_binary(Name)),
+        Wildcard, ")"];
 
 to_query({op_default, Value}) ->
     ["($default:", Value, ")"].
@@ -238,8 +239,8 @@ field_exists_query(Path) ->
     % match a path foo.name against foo.name_first (if were to just
     % appened * isntead).
     Parts = [
-        {op_fieldname, {[path_str(Path)], "\\:*"}},
-        {op_fieldname, {[path_str(Path)], ".*"}}
+        {op_fieldname, {[path_str(Path)], "%3A*"}},
+        {op_fieldname, {[path_str(Path)], "%2E*"}}
     ],
     {op_or, Parts}.
 
@@ -301,9 +302,3 @@ escape_chars(Fields, Chars) when is_list(Fields) ->
 value_chars() ->
     [<<"/">>, <<":">>, <<" ">>, <<"\t">>, <<"\r">>, <<"\n">>].
 
-
-lucene_chars()->
-    [<<"\\\\">>, <<"/">>, <<"\\+">>, <<"\\-">>, <<"\\&\\&">>,
-    <<"\\|\\|">>, <<"\\!">>, <<"\\(">>, <<"\\)">>, <<"\\{">>, <<"\\}">>,
-    <<"\\[">>, <<"\\]">>, <<"\\^">>, <<"\~">>, <<"\\*">>, <<"\\?">>,
-    <<":">>].

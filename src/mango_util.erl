@@ -17,7 +17,9 @@
     dec_dbname/1,
 
     enc_hex/1,
-    dec_hex/1
+    dec_hex/1,
+
+    url_encode_utf8/1
 ]).
 
 
@@ -214,4 +216,29 @@ dec_hex_byte(N) when N >= $a, N =< $f -> (N - $a) + 10;
 dec_hex_byte(N) when N >= $A, N =< $F -> (N - $A) + 10;
 dec_hex_byte(N) -> throw({invalid_hex_character, N}).
 
+url_encode_utf8(Bin) when is_binary(Bin) ->
+    url_encode_utf8(binary_to_list(Bin));
+url_encode_utf8([H|T]) ->
+    if
+    H >= $a, $z >= H ->
+        [H|url_encode_utf8(T)];
+    H >= $A, $Z >= H ->
+        [H|url_encode_utf8(T)];
+    H >= $0, $9 >= H ->
+        [H|url_encode_utf8(T)];
+    true ->
+        twig:log(notice, "Character To Hex ~p", [H]),
+        case lists:flatten(io_lib:format("~.16.0B", [H])) of
+            [W, X, Y, Z] ->
+                [$%, W, X, $%, Y, Z | url_encode_utf8(T)];
+            [X, Y, Z] ->
+                [$%, X, Y, $0, Z | url_encode_utf8(T)];
+            [X, Y] ->
+                [$%, X, Y | url_encode_utf8(T)];
+            [X] ->
+                [$%, $0, X | url_encode_utf8(T)]
+        end
+    end;
+url_encode_utf8([]) ->
+    [].
 
