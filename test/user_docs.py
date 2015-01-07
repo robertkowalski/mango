@@ -1,4 +1,4 @@
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
 """
 Generated with http://www.json-generator.com/
 
@@ -451,6 +451,7 @@ DOCS = [
     {
         "_id": "c78c529f-0b07-4947-90a6-d6b7ca81da62",
         "user_id": 14,
+        "«ταБЬℓσ»" : "utf-8",
         "name": {
             "first": "Faith",
             "last": "Hess"
