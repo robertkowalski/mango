@@ -183,11 +183,17 @@ validate_use_index(IndexName) when is_binary(IndexName) ->
     case binary:split(IndexName, <<"/">>) of
         [DesignId] ->
             {ok, [DesignId]};
+        [<<"_design">>, DesignId] ->
+            {ok, [DesignId]};
         [DesignId, ViewName] ->
+            {ok, [DesignId, ViewName]};
+        [<<"_design">>, DesignId, ViewName] ->
             {ok, [DesignId, ViewName]};
         _ ->
             ?MANGO_ERROR({invalid_index_name, IndexName})
     end;
+validate_use_index(null) ->
+    {ok, []};
 validate_use_index([]) ->
     {ok, []};
 validate_use_index([DesignId]) when is_binary(DesignId) ->

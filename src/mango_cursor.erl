@@ -99,8 +99,8 @@ filter_indexes(Indexes0, DesignId, ViewName) ->
 
 
 create_cursor(Db, Indexes, Selector, Opts) ->
-    [{CursorMod, Indexes} | _] = group_indexes_by_type(Indexes),
-    CursorMod:create(Db, Indexes, Selector, Opts).
+    [{CursorMod, CursorModIndexes} | _] = group_indexes_by_type(Indexes),
+    CursorMod:create(Db, CursorModIndexes, Selector, Opts).
 
 
 group_indexes_by_type(Indexes) ->
@@ -115,8 +115,8 @@ group_indexes_by_type(Indexes) ->
     ],
     lists:flatmap(fun(CMod) ->
         case dict:find(CMod, IdxDict) of
-            {ok, Indexes} ->
-                [{CMod, Indexes}];
+            {ok, CModIndexes} ->
+                [{CMod, CModIndexes}];
             error ->
                 []
         end
