@@ -16,7 +16,7 @@ info(mango_cursor, {no_usable_index, no_index_matching_name}) ->
     {
         400,
         <<"no_usable_index">>,
-        <<"No index matches the specified \"index_name\"">>
+        <<"No index matches the index specified with \"use_index\"">>
     };
 info(mango_cursor, {no_usable_index, missing_sort_index}) ->
     {

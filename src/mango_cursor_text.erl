@@ -2,6 +2,7 @@
 
 -export([
     create/4,
+    explain/1,
     execute/3
 ]).
 
@@ -37,6 +38,17 @@ create(Db, Indexes, Selector, Opts) ->
         skip = Skip,
         fields = Fields
     }}.
+
+
+explain(Cursor) ->
+    #cursor{
+        selector = Selector,
+        opts = Opts
+    } = Cursor,
+    [
+        {'query', mango_selector_text:convert(Selector)},
+        {sort, sort_query(Opts)}
+    ].
 
 
 execute(Cursor, UserFun, UserAcc) ->

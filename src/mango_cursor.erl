@@ -3,6 +3,7 @@
 
 -export([
     create/3,
+    explain/1,
     execute/3
 ]).
 
@@ -42,6 +43,28 @@ create(Db, Selector0, Opts) ->
     create_cursor(Db, UsableIndexes, Selector, Opts).
 
 
+explain(#cursor{}=Cursor) ->
+    #cursor{
+        index = Idx,
+        selector = Selector,
+        opts = Opts0,
+        limit = Limit,
+        skip = Skip,
+        fields = Fields
+    } = Cursor,
+    Mod = mango_idx:cursor_mod(Idx),
+    Opts = lists:keydelete(user_ctx, 1, Opts0),
+    {[
+        {dbname, mango_idx:dbname(Idx)},
+        {index, mango_idx:to_json(Idx)},
+        {selector, Selector},
+        {opts, {Opts}},
+        {limit, Limit},
+        {skip, Skip},
+        {fields, Fields}
+    ] ++ Mod:explain(Cursor)}.
+
+
 execute(#cursor{index=Idx}=Cursor, UserFun, UserAcc) ->
     Mod = mango_idx:cursor_mod(Idx),
     Mod:execute(Cursor, UserFun, UserAcc).
@@ -76,8 +99,8 @@ filter_indexes(Indexes0, DesignId, ViewName) ->
 
 
 create_cursor(Db, Indexes, Selector, Opts) ->
-    [{CursorMod, Indexes} | _] = group_indexes_by_type(Indexes),
-    CursorMod:create(Db, Indexes, Selector, Opts).
+    [{CursorMod, CursorModIndexes} | _] = group_indexes_by_type(Indexes),
+    CursorMod:create(Db, CursorModIndexes, Selector, Opts).
 
 
 group_indexes_by_type(Indexes) ->
@@ -92,8 +115,8 @@ group_indexes_by_type(Indexes) ->
     ],
     lists:flatmap(fun(CMod) ->
         case dict:find(CMod, IdxDict) of
-            {ok, Indexes} ->
-                [{CMod, Indexes}];
+            {ok, CModIndexes} ->
+                [{CMod, CModIndexes}];
             error ->
                 []
         end
