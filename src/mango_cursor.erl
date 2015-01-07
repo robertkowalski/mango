@@ -39,10 +39,7 @@ create(Db, Selector0, Opts) ->
         ?MANGO_ERROR({no_usable_index, selector_unsupported})
     end,
 
-    Index = choose_best(UsableIndexes, Selector, Opts),
-
-    Mod = mango_idx:cursor_mod(Index),
-    Mod:create(Db, Index, Selector, Opts).
+    create_cursor(Db, UsableIndexes, Selector, Opts).
 
 
 execute(#cursor{index=Idx}=Cursor, UserFun, UserAcc) ->
@@ -54,11 +51,9 @@ maybe_filter_indexes(Indexes, Opts) ->
     case lists:keyfind(use_index, 1, Opts) of
         {use_index, []} ->
             Indexes;
-        {index_name, []} ->
-            Indexes;
-        {index_name, [DesignId]} ->
+        {use_index, [DesignId]} ->
             filter_indexes(Indexes, DesignId);
-        {index_name, [DesignId, ViewName]} ->
+        {use_index, [DesignId, ViewName]} ->
             filter_indexes(Indexes, DesignId, ViewName)
     end.
 
@@ -80,9 +75,26 @@ filter_indexes(Indexes0, DesignId, ViewName) ->
     lists:filter(FiltFun, Indexes).
 
 
-choose_best(Indexes, Selector, Opts) ->
-    Pred = fun(I) -> {mango_idx:priority(I, Selector, Opts), I} end,
-    Prioritized = lists:map(Pred, Indexes),
-    Sorted = lists:sort(Prioritized),
-    {_, Idx} = lists:last(Sorted),
-    Idx.
+create_cursor(Db, Indexes, Selector, Opts) ->
+    [{CursorMod, Indexes} | _] = group_indexes_by_type(Indexes),
+    CursorMod:create(Db, Indexes, Selector, Opts).
+
+
+group_indexes_by_type(Indexes) ->
+    IdxDict = lists:foldl(fun(I, D) ->
+        dict:append(mango_idx:cursor_mod(I), I, D)
+    end, dict:new(), Indexes),
+    % The first cursor module that has indexes will be
+    % used to service this query.
+    CursorModules = [
+        mango_cursor_view,
+        mango_cursor_text
+    ],
+    lists:flatmap(fun(CMod) ->
+        case dict:find(CMod, IdxDict) of
+            {ok, Indexes} ->
+                [{CMod, Indexes}];
+            error ->
+                []
+        end
+    end, CursorModules).
