@@ -446,7 +446,11 @@ DOCS = [
             "C",
             "Ruby",
             "Ruby"
-        ]
+        ],
+        "utf8-1[]:string" : "string",
+        "utf8-2[]:boolean[]" : True,
+        "utf8-3[]:number" : 9,
+        "utf8-3[]:null" : None
     },
     {
         "_id": "c78c529f-0b07-4947-90a6-d6b7ca81da62",
