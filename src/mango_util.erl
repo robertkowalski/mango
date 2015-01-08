@@ -216,8 +216,10 @@ dec_hex_byte(N) when N >= $a, N =< $f -> (N - $a) + 10;
 dec_hex_byte(N) when N >= $A, N =< $F -> (N - $A) + 10;
 dec_hex_byte(N) -> throw({invalid_hex_character, N}).
 
+
+
 url_encode_utf8(Bin) when is_binary(Bin) ->
-    url_encode_utf8(binary_to_list(Bin));
+    iolist_to_binary(url_encode_utf8(binary_to_list(Bin)));
 url_encode_utf8([H|T]) ->
     if
     H >= $a, $z >= H ->
