@@ -73,28 +73,64 @@ execute(Cursor, UserFun, UserAcc) ->
         include_docs = true,
         limit = Limit,
         sort = SortQuery,
-        bookmark = Bookmark0
+        bookmark = Bookmark0,
+        keep_sortable=true
     },
+    {Hits, Bookmark} = get_hits(DbName, DDoc, IndexName, QueryArgs, Selector,
+        Limit, []),
+    {ok, UserAcc1} = UserFun({add_key, bookmark, Bookmark}, UserAcc),
+    try
+        UserAcc2 = lists:foldl(fun(Hit, Acc) ->
+            case UserFun({row, Hit}, Acc) of
+                {ok, NewAcc} -> NewAcc;
+                {stop, NewAcc} -> throw({stop, NewAcc})
+            end
+        end, UserAcc1, Hits),
+                {ok, UserAcc2}
+    catch
+        throw:{stop, StopAcc} ->
+            {ok, StopAcc}
+    end.
+
+%% Returns hits required by the limit. We keep calling search
+%% until we meet the required limit value.
+get_hits(DbName, DDoc, IndexName, QueryArgs, Selector, Difference, HitsAcc) ->
     case dreyfus_fabric_search:go(DbName, DDoc, IndexName, QueryArgs) of
         {ok, Bookmark1, _, Hits0, _, _} ->
-            Hits = hits_to_json(DbName, Hits0, Selector),
-            Bookmark = dreyfus_fabric_search:pack_bookmark(Bookmark1),
-            {ok, UserAcc1} = UserFun({add_key, bookmark, Bookmark}, UserAcc),
-            try
-                UserAcc2 = lists:foldl(fun(Hit, Acc) ->
-                    case UserFun({row, Hit}, Acc) of
-                        {ok, NewAcc} -> NewAcc;
-                        {stop, NewAcc} -> throw({stop, NewAcc})
+            NewHits = hits_to_json(DbName, Hits0, Selector),
+            DreyfusDiff = Difference - length(Hits0),
+            FilteredDiff = Difference - length(NewHits),
+            case DreyfusDiff of
+                % We don't care if we get filtered because there are no results
+                % left anyway, so just return current and new hits and bookmark
+                DD when DD > 0 ->
+                    Bookmark = dreyfus_fabric_search:pack_bookmark(Bookmark1),
+                    {HitsAcc ++ NewHits, Bookmark};
+                % We get dreyfus results more than or equal to our difference
+                _ ->
+                    case FilteredDiff of
+                        % Our filtered results has less than required difference
+                        % so get another block
+                        FD when FD > 0 ->
+                            get_hits(DbName, DDoc, IndexName, QueryArgs,
+                                Selector, FD, HitsAcc ++ NewHits);
+                        % Our filtered results is more than required so need
+                        % to add the remaining hits
+                        _ ->
+                            add_missing_hits(Difference, HitsAcc, NewHits)
                     end
-                end, UserAcc1, Hits),
-                {ok, UserAcc2}
-            catch
-                throw:{stop, StopAcc} ->
-                    {ok, StopAcc}
             end;
         {error, Reason} ->
             ?MANGO_ERROR({text_search_error, {error, Reason}})
     end.
+
+
+%% Populates the remaining left over rows that were filtered out
+%% Also grabs the bookmark for the last row
+add_missing_hits(Diff, HitsAcc, NewHits) ->
+    DiffHits = remove_sortable(lists:sublist(NewHits, Diff)),
+    Bookmark = dreyfus_fabric_search:pack_bookmark(lists:nth(Diff, NewHits)),
+    {HitsAcc ++ DiffHits, Bookmark}.
 
 
 %% Convert Query to Dreyfus sort specifications
@@ -129,10 +165,19 @@ ddocid(Idx) ->
     end.
 
 
+remove_sortable(List) ->
+    remove_sortable(List, []).
+
+remove_sortable([], Acc) ->
+    lists:reverse(Acc);
+remove_sortable([#sortable{item=Item} | Rest], Acc) ->
+    remove_sortable(Rest, [Item | Acc]).
+
+
 hits_to_json(DbName, Hits, Selector) ->
     Ids = lists:map(fun(Hit) ->
         couch_util:get_value(<<"_id">>, Hit#hit.fields)
-    end, Hits),
+    end, remove_sortable(Hits)),
     {ok, IdDocs} = dreyfus_fabric:get_json_docs(DbName, Ids),
     Docs = lists:map(fun({_Id, {doc, Doc}}) ->
         Doc
