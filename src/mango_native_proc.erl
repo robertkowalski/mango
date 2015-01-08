@@ -156,7 +156,7 @@ get_text_field_values(Values, TAcc) when is_list(Values) ->
     % We bypass make_text_field and directly call make_text_field_name
     % because the length field name is not part of the path.
     LengthFieldName = make_text_field_name(NewTAcc#tacc.path, <<"length">>),
-    EncLFN = iolist_to_binary(mango_util:url_encode_utf8(LengthFieldName)),
+    EncLFN = mango_util:url_encode_utf8(LengthFieldName),
     LengthField = [{EncLFN, <<"length">>, length(Values)}],
     get_text_field_values_arr(Values, NewTAcc, LengthField);
 
@@ -274,7 +274,7 @@ make_text_field(TAcc, Type, Value) ->
     Fields = TAcc#tacc.fields,
     case Fields == all_fields orelse lists:member(FieldName, Fields) of
         true ->
-            [{iolist_to_binary(mango_util:url_encode_utf8(FieldName)), Type,
+            [{mango_util:url_encode_utf8(FieldName), Type,
             Value}];
         false ->
             []
