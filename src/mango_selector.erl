@@ -448,14 +448,6 @@ match({[{<<"$exists">>, ShouldExist}]}, Value, _Cmp) ->
     Exists = Value /= undefined,
     ShouldExist andalso Exists;
 
-% This match is specifically for $exists:false because the generalized
-% match would filter out a document when get_field returns not_found
-match({[{Field, {[{<<"$exists">>, false}]}}]}, Value, _Cmp) ->
-    case mango_doc:get_field(Value, Field) of
-        not_found -> true;
-        _ -> false
-    end;
-
 match({[{<<"$type">>, Arg}]}, Value, _Cmp) when is_binary(Arg) ->
     Arg == mango_json:type(Value);
 
@@ -496,7 +488,12 @@ match({[{<<"$", _/binary>>=Op, _}]}, _, _) ->
 match({[{Field, Cond}]}, Value, Cmp) ->
     case mango_doc:get_field(Value, Field) of
         not_found ->
-            false;
+            case Cond of
+                {[{<<"$exists">>, false}]} ->
+                    true;
+                _ ->
+                    false
+            end;
         bad_path ->
             false;
         SubValue when Field == <<"_id">> ->
