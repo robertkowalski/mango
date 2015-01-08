@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import mango
 import user_docs
 
@@ -354,12 +353,6 @@ class BasicTextTests(mango.UserDocsTextTests):
         q = {"$not": q}
         docs = self.db.find(q)
         assert len(docs) == len(user_docs.DOCS)
-
-    def test_utf8_field(self):
-        q = {"«ταБЬℓσ»" : "utf-8"}
-        docs = self.db.find(q)
-        assert len(docs) == 1
-        assert docs[0]["user_id"] == 14
 
     # test lucene syntax in $text
 
