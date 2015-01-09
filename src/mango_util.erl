@@ -229,7 +229,6 @@ url_encode_utf8([H|T]) ->
     H >= $0, $9 >= H ->
         [H|url_encode_utf8(T)];
     true ->
-        twig:log(notice, "Character To Hex ~p", [H]),
         case lists:flatten(io_lib:format("~.16.0B", [H])) of
             [W, X, Y, Z] ->
                 [$%, W, X, $%, Y, Z | url_encode_utf8(T)];
