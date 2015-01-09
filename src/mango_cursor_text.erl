@@ -97,27 +97,29 @@ execute(Cursor, UserFun, UserAcc) ->
 get_hits(DbName, DDoc, IndexName, QueryArgs, Selector, Difference, HitsAcc) ->
     case dreyfus_fabric_search:go(DbName, DDoc, IndexName, QueryArgs) of
         {ok, Bookmark1, _, Hits0, _, _} ->
-            NewHits = hits_to_json(DbName, Hits0, Selector),
+            Bookmark = dreyfus_fabric_search:pack_bookmark(Bookmark1),
+            NewFilteredHits = hits_to_json(DbName, Hits0, Selector),
             DreyfusDiff = Difference - length(Hits0),
-            FilteredDiff = Difference - length(NewHits),
+            FilteredDiff = Difference - length(NewFilteredHits),
             case DreyfusDiff of
                 % We don't care if we get filtered because there are no results
                 % left anyway, so just return current and new hits and bookmark
                 DD when DD > 0 ->
-                    Bookmark = dreyfus_fabric_search:pack_bookmark(Bookmark1),
-                    {HitsAcc ++ NewHits, Bookmark};
+                    {HitsAcc ++ NewFilteredHits, Bookmark};
                 % We get dreyfus results more than or equal to our difference
                 _ ->
                     case FilteredDiff of
                         % Our filtered results has less than required difference
                         % so get another block
                         FD when FD > 0 ->
-                            get_hits(DbName, DDoc, IndexName, QueryArgs,
-                                Selector, FD, HitsAcc ++ NewHits);
+                            get_hits(DbName, DDoc, IndexName,
+                                QueryArgs#index_query_args{bookmark=Bookmark},
+                                    Selector, FD, HitsAcc ++ NewFilteredHits);
                         % Our filtered results is more than required so need
                         % to add the remaining hits
                         _ ->
-                            add_missing_hits(Difference, HitsAcc, NewHits)
+                            add_missing_hits(Difference, HitsAcc, Hits0,
+                                NewFilteredHits)
                     end
             end;
         {error, Reason} ->
@@ -125,12 +127,18 @@ get_hits(DbName, DDoc, IndexName, QueryArgs, Selector, Difference, HitsAcc) ->
     end.
 
 
-%% Populates the remaining left over rows that were filtered out
-%% Also grabs the bookmark for the last row
-add_missing_hits(Diff, HitsAcc, NewHits) ->
-    DiffHits = remove_sortable(lists:sublist(NewHits, Diff)),
-    Bookmark = dreyfus_fabric_search:pack_bookmark(lists:nth(Diff, NewHits)),
+%% Populates the remaining left over rows
+%% Also sets bookmark as the last populated row
+add_missing_hits(Diff, HitsAcc, UnFilteredHits, NewFilteredHits) ->
+    N = length(UnFilteredHits) - length(NewFilteredHits) + Diff,
+    NSortable = lists:nth(N, UnFilteredHits),
+    DiffHits = lists:sublist(NewFilteredHits, Diff),
+    Bookmark = dreyfus_fabric_search:pack_bookmark(create_bookmark(NSortable)),
     {HitsAcc ++ DiffHits, Bookmark}.
+
+
+create_bookmark(#sortable{order=[Score, Doc], shard=Shard}) ->
+    [#sortable{order=[Score, Doc], shard=Shard}].
 
 
 %% Convert Query to Dreyfus sort specifications
@@ -165,6 +173,7 @@ ddocid(Idx) ->
     end.
 
 
+%% Copied over from Dreyfus
 remove_sortable(List) ->
     remove_sortable(List, []).
 
