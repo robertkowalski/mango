@@ -1,6 +1,7 @@
 -module(mango_cursor_view).
 
 -export([
+    explain/1,
     execute/3
 ]).
 
@@ -11,6 +12,17 @@
 
 -include_lib("couch/include/couch_db.hrl").
 -include("mango_cursor.hrl").
+
+
+explain(Cursor) ->
+    #cursor{
+        index = Idx,
+        ranges = Ranges
+    } = Cursor,
+    [{range, {[
+        {start_key, mango_idx:start_key(Idx, Ranges)},
+        {end_key, mango_idx:end_key(Idx, Ranges)}
+    ]}}].
 
 
 execute(#cursor{db = Db, index = Idx} = Cursor0, UserFun, UserAcc) ->
